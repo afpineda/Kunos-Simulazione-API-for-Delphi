@@ -1,0 +1,69 @@
+object Form_About: TForm_About
+  Left = 0
+  Top = 0
+  BorderStyle = bsDialog
+  Caption = 'About'
+  ClientHeight = 148
+  ClientWidth = 254
+  Color = clBtnFace
+  Font.Charset = ANSI_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -16
+  Font.Name = 'Calibri'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poMainFormCenter
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 19
+  object Lbl_C: TLabel
+    Left = 0
+    Top = 0
+    Width = 254
+    Height = 65
+    Align = alTop
+    Alignment = taCenter
+    AutoSize = False
+    Caption = '(C) 2021. '#193'ngel Fern'#225'ndez Pineda. Madrid. Spain.'
+    Color = clWindow
+    ParentColor = False
+    Layout = tlBottom
+    WordWrap = True
+    ExplicitWidth = 282
+  end
+  object Lbl_build: TLabel
+    Left = 0
+    Top = 129
+    Width = 254
+    Height = 19
+    Align = alBottom
+    Alignment = taRightJustify
+    Caption = 'BUILD'
+    ExplicitTop = 222
+    ExplicitWidth = 40
+  end
+  object Lbl_notForSale: TLabel
+    Left = 0
+    Top = 65
+    Width = 254
+    Height = 64
+    Align = alClient
+    Alignment = taCenter
+    AutoSize = False
+    Caption = 'This software is in the public domain. NOT FOR SALE.'
+    Color = clWindow
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clRed
+    Font.Height = -16
+    Font.Name = 'Calibri'
+    Font.Style = []
+    ParentColor = False
+    ParentFont = False
+    Layout = tlCenter
+    WordWrap = True
+    ExplicitLeft = 8
+    ExplicitTop = 128
+    ExplicitWidth = 321
+    ExplicitHeight = 117
+  end
+end

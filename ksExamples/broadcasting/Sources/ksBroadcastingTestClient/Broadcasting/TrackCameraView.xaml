@@ -1,0 +1,85 @@
+﻿<UserControl x:Class="ksBroadcastingTestClient.Broadcasting.TrackCameraView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ksBroadcastingTestClient.Broadcasting"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             Name="TrackCamControl">
+    <Grid>
+        <ItemsControl ItemsSource="{Binding CameraSets}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <!-- Each TV set has a head (=set) followed by a list of their cameras -->
+                    <StackPanel Orientation="Vertical" >
+                        <!-- HEAD -->
+                        <Border BorderThickness="1" BorderBrush="Black" Background="{Binding CamsetBackground}">
+                            <TextBlock Text="{Binding CameraSetName}" Foreground="{Binding CamsetForeground}"  Width="70" TextAlignment="Center" FontWeight="Bold" Margin="5,2,5,2" />
+                        </Border>
+
+                        <!-- ITEMS = CAMS -->
+                        <ItemsControl ItemsSource="{Binding Cameras}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderThickness="1" BorderBrush="Black" Background="{Binding CameraBackground}">
+                                        <Border.InputBindings>
+                                            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ElementName=TrackCamControl, Path=DataContext.RequestCameraSwitchCommand}" CommandParameter="{Binding}" />
+                                        </Border.InputBindings>
+                                        <TextBlock Text="{Binding CameraName}" Foreground="{Binding CameraForeground}" Width="90" TextAlignment="Center" Margin="5,2,5,2" />
+                                    </Border>
+
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </StackPanel>
+
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 2nd part: HUD pages; we will put them below the drivable and pit cams, there will be always more space -->
+        <!-- Each TV set has a head (=set) followed by a list of their cameras -->
+        <StackPanel Orientation="Vertical" Width="150" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5, 182, 5, 2">
+            <!-- HEAD -->
+            <Border BorderThickness="1" BorderBrush="Black" Background="Black">
+                <TextBlock Text="HudPages" Foreground="Yellow" TextAlignment="Center" FontWeight="Bold" Margin="5,2,5,2" />
+            </Border>
+
+            <!-- ITEMS = CAMS -->
+            <ItemsControl ItemsSource="{Binding HudPages}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderThickness="1" BorderBrush="Black" Background="{Binding HudPageBackground}">
+                            <Border.InputBindings>
+                                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ElementName=TrackCamControl, Path=DataContext.RequestHudSwitchCommand}" CommandParameter="{Binding}" />
+                            </Border.InputBindings>
+                            <TextBlock Text="{Binding Caption}" Foreground="{Binding HudPageForeground}" Width="90" TextAlignment="Center" Margin="5,2,5,2" />
+                        </Border>
+
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </Grid>
+</UserControl>

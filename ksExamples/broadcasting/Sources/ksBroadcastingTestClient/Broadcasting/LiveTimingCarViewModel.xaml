@@ -1,0 +1,66 @@
+﻿<UserControl x:Class="ksBroadcastingTestClient.Broadcasting.LiveTimingCarViewModel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ksBroadcastingTestClient.Broadcasting"
+             mc:Ignorable="d" 
+             d:DesignHeight="70" d:DesignWidth="800">
+
+        <!-- Data -->
+    <StackPanel Orientation="Horizontal" Background="{Binding RowBackground}">
+        <TextBlock Width="30" Text="{Binding Position}" Style="{StaticResource RowSizedText}" FontWeight="Bold" Foreground="{Binding RowForeground}" />
+        <TextBlock Width="60" Text="{Binding RaceNumber, StringFormat={}#{0}}" Style="{StaticResource RowSizedText}" TextAlignment="Center" Foreground="{Binding RowForeground}" />
+        <TextBlock Width="60" Text="{Binding CurrentDriver.ShortName}" Style="{StaticResource RowSizedText}" Foreground="{Binding RowForeground}" />
+        <StackPanel Width="150" Orientation="Vertical">
+            <TextBlock Text="{Binding TeamName}" Style="{StaticResource HalfSizeText}" Foreground="{Binding RowForeground}" />
+            <TextBlock Text="{Binding CurrentDriver.DisplayName}" Style="{StaticResource HalfSizeText}" FontWeight="Bold"  Foreground="{Binding RowForeground}" />
+        </StackPanel>
+
+        <TextBlock Width="50" Text="{Binding Laps}" Style="{StaticResource RowSizedText}" TextAlignment="Right" Foreground="{Binding RowForeground}" />
+        <TextBlock Width="50" Text="{Binding LocationHint}" TextAlignment="Center" Style="{StaticResource RowSizedText}" Foreground="{Binding RowForeground}" />
+        <TextBlock Width="40" Text="{Binding DeltaString}" Foreground="{Binding DeltaColor}" TextAlignment="Center" Style="{StaticResource RowSizedText}" />
+
+        <StackPanel Width="75" Orientation="Vertical">
+            <TextBlock Text="{Binding CurrentLap.LaptimeString}" Style="{StaticResource 2ThirdSizeText}" HorizontalAlignment="Right" Foreground="{Binding RowForeground}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding CurrentLap.Split1String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}" Grid.Column="0" Foreground="{Binding RowForeground}" />
+                <TextBlock Text="{Binding CurrentLap.Split2String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}" Grid.Column="1" Foreground="{Binding RowForeground}" />
+                <TextBlock Text="{Binding CurrentLap.Split2String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}"  Grid.Column="2" Foreground="{Binding RowForeground}" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Width="75" Orientation="Vertical">
+            <TextBlock Text="{Binding LastLap.LaptimeString}" Style="{StaticResource 2ThirdSizeText}" HorizontalAlignment="Right" Foreground="{Binding RowForeground}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding LastLap.Split1String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}" Grid.Column="0" Foreground="{Binding RowForeground}" />
+                <TextBlock Text="{Binding LastLap.Split2String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}" Grid.Column="1" Foreground="{Binding RowForeground}" />
+                <TextBlock Text="{Binding LastLap.Split2String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}"  Grid.Column="2" Foreground="{Binding RowForeground}" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Width="75" Orientation="Vertical">
+            <TextBlock Text="{Binding BestLap.LaptimeString}" Style="{StaticResource 2ThirdSizeText}" HorizontalAlignment="Right" Foreground="{Binding RowForeground}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding BestLap.Split1String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}" Grid.Column="0" Foreground="{Binding RowForeground}" />
+                <TextBlock Text="{Binding BestLap.Split2String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}" Grid.Column="1" Foreground="{Binding RowForeground}" />
+                <TextBlock Text="{Binding BestLap.Split2String}" TextAlignment="Right" Style="{StaticResource 1ThirdSizeText}"  Grid.Column="2" Foreground="{Binding RowForeground}" />
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

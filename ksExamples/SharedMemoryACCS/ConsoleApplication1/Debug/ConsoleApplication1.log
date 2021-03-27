@@ -1,0 +1,22 @@
+﻿  ACCSM_Example.cpp
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(148): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(149): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(150): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(154): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(175): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(176): warning C4244: 'argument': conversion from 'AC_STATUS' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(177): warning C4244: 'argument': conversion from 'AC_SESSION_TYPE' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(178): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(179): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(181): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(183): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(185): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(188): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(189): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(190): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(191): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(206): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(207): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(211): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\users\kunos\desktop\sharedmemoryaccs\consoleapplication1\accsm_example.cpp(215): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  ConsoleApplication1.vcxproj -> C:\Users\KUNOS\Desktop\SharedMemoryACCS\Debug\SharedMemoryExample.exe

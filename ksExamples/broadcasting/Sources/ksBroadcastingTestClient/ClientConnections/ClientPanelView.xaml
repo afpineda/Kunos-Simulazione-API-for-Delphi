@@ -1,0 +1,46 @@
+﻿<UserControl x:Class="ksBroadcastingTestClient.ClientConnections.ClientPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ksBroadcastingTestClient.ClientConnections"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="150"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="130"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Text="IP:" Margin="1" />
+            <TextBlock Text="Port:" Margin="1" />
+            <TextBlock Text="Display Name:" Margin="1" />
+            <TextBlock Text="Connection PW:" Margin="1" />
+            <TextBlock Text="Update interval:" Margin="1" />
+            <TextBlock Text="Command PW:"  Margin="1"/>
+            <Button Content="Connect" Command="{Binding ConnectCmd}" Margin="1"/>
+            <Button Content="Disconnect" Command="{Binding DisconnectCmd}" Margin="1"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1">
+            <TextBox Text="{Binding IP}" />
+            <TextBox Text="{Binding Port}" />
+            <TextBox Text="{Binding DisplayName}" />
+            <TextBox Text="{Binding ConnectionPw}" />
+            <TextBox Text="{Binding RealtimeUpdateIntervalMS}" />
+            <TextBox Text="{Binding CommandPw}" />
+        </StackPanel>
+
+        <ListView ItemsSource="{Binding Clients}" SelectedItem="{Binding SelectedClient}"
+                  Grid.ColumnSpan="2" Grid.Row="1" Margin="1, 20, 1, 1">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <local:ClientConnectionView />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</UserControl>

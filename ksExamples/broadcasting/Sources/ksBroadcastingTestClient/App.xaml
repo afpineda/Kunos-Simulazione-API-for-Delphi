@@ -1,0 +1,20 @@
+﻿<Application x:Class="ksBroadcastingTestClient.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ksBroadcastingTestClient"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <Style x:Key="RowSizedText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22" />
+        </Style>
+        <Style x:Key="2ThirdSizeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style x:Key="1ThirdSizeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="7" />
+        </Style>
+        <Style x:Key="HalfSizeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </Application.Resources>
+</Application>

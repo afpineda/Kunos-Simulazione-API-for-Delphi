@@ -1,0 +1,72 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{31F296D5-EE7F-407B-999E-FF9FF8B0BDE3}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="DMATestApp.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ACPressureTest.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ACDataSpotter.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BroadcastTestApp.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DMATestApp">
+        <MSBuild Projects="DMATestApp.dproj"/>
+    </Target>
+    <Target Name="DMATestApp:Clean">
+        <MSBuild Projects="DMATestApp.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DMATestApp:Make">
+        <MSBuild Projects="DMATestApp.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ACPressureTest">
+        <MSBuild Projects="ACPressureTest.dproj"/>
+    </Target>
+    <Target Name="ACPressureTest:Clean">
+        <MSBuild Projects="ACPressureTest.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ACPressureTest:Make">
+        <MSBuild Projects="ACPressureTest.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ACDataSpotter">
+        <MSBuild Projects="ACDataSpotter.dproj"/>
+    </Target>
+    <Target Name="ACDataSpotter:Clean">
+        <MSBuild Projects="ACDataSpotter.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ACDataSpotter:Make">
+        <MSBuild Projects="ACDataSpotter.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BroadcastTestApp">
+        <MSBuild Projects="BroadcastTestApp.dproj"/>
+    </Target>
+    <Target Name="BroadcastTestApp:Clean">
+        <MSBuild Projects="BroadcastTestApp.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BroadcastTestApp:Make">
+        <MSBuild Projects="BroadcastTestApp.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DMATestApp;ACPressureTest;ACDataSpotter;BroadcastTestApp"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DMATestApp:Clean;ACPressureTest:Clean;ACDataSpotter:Clean;BroadcastTestApp:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DMATestApp:Make;ACPressureTest:Make;ACDataSpotter:Make;BroadcastTestApp:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

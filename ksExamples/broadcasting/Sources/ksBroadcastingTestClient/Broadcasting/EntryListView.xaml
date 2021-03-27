@@ -1,0 +1,53 @@
+﻿<UserControl x:Class="ksBroadcastingTestClient.Broadcasting.EntryListView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+        xmlns:local="clr-namespace:ksBroadcastingTestClient.Broadcasting"
+        mc:Ignorable="d"
+        d:DesignHeight="450" d:DesignWidth="800"
+        Name="EntryListControl">
+    <UserControl.Resources>
+        <CollectionViewSource x:Key="src" Source="{Binding Cars}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="Position" Direction="Ascending" />
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+    </UserControl.Resources>
+    <Grid>
+        <StackPanel Orientation="Vertical">
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Width="30" Text="P" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Session Position/Rank" />
+                <TextBlock Width="60" Text="Car" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Car number" />
+                <TextBlock Width="60" Text="Drv" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Driver short name" />
+                <TextBlock Width="150" Text="Team/Driver" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Team + Driver name" />
+                <TextBlock Width="50" Text="Laps" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Laps completed" />
+                <TextBlock Width="50" Text="Loc" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Location hints: PEn = PitEntry, PLa = PitLane, PEx = PitExit, OUT = Outlap, IN = Inlap" />
+                <TextBlock Width="40" Text="D" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Delta to best lap" />
+                <TextBlock Width="75" Text="Current" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Current laptime, splits, in/outlap hint" />
+                <TextBlock Width="75" Text="Last" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Driver's last laptime, splits, in/outlap hint" />
+                <TextBlock Width="75" Text="Best" Style="{StaticResource RowSizedText}" TextAlignment="Center" ToolTip="Car's best laptime, splits, in/outlap hint" />
+            </StackPanel>
+
+            <ItemsControl Name="listViewCars" ItemsSource="{Binding Source={StaticResource src}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel  Orientation="Vertical"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <local:LiveTimingCarView Margin="0,3,0,0" >
+                            <local:LiveTimingCarView.InputBindings>
+                                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ElementName=EntryListControl, Path=DataContext.RequestFocusedCarCommand}" CommandParameter="{Binding}" />
+                            </local:LiveTimingCarView.InputBindings>
+                        </local:LiveTimingCarView>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Grid>
+</UserControl>
