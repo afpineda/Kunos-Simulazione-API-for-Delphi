@@ -50,9 +50,6 @@ type
       const connectionPassword: string; const msUpdateInterval: Int32;
       const commandPassword: string);
     procedure RequestDisconnect;
-    procedure RequestInstantReplay(const startSessionTime, durationMS: Single;
-      const initialFocusedCarIndex: Int32 = -1;
-      const initialCameraSet: string = ''; const initialCamera: string = '');
     procedure SendMessage(const outStrm: TBytesStream); virtual; abstract;
     procedure doOnBroadcastingEvent(const event: TksBroadcastingEvent);
       virtual; abstract;
@@ -79,6 +76,9 @@ type
     procedure RequestFocus(const carRaceNumber: Integer;
       const cameraSet: string = ''; const camera: string = ''); overload;
     procedure RequestFocus(const cameraSet, camera: string); overload;
+    procedure RequestInstantReplay(const startSessionTime, durationMS: Single;
+      const initialFocusedCarIndex: Int32 = -1;
+      const initialCameraSet: string = ''; const initialCamera: string = '');
     procedure RequestHUDPage(const HUDPage: string);
     procedure RequestTrackData;
   end;
@@ -161,7 +161,7 @@ var
   begin
     carData.readFromStream(inStrm);
     carInfo := TksCarInfo.findCarInfo(FEntryList, carData.carIndex);
-    if (carInfo = nil) or (FEntryList.Count <> carData.driverCount) then
+    if (carInfo = nil) or (carInfo.Drivers.Count<>carData.DriverCount) then
       RequestEntryList
     else
       doOnRealTimeCarUpdate(carData);

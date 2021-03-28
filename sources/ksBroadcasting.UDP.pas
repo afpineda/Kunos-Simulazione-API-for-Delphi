@@ -4,6 +4,7 @@ interface
 
 uses
   Classes,
+  Winapi.Winsock2,
   System.Net.Socket,
   System.Threading,
   System.Generics.Collections,
@@ -14,10 +15,12 @@ uses
 type
   TksBroadcastingProtocolUDPImpl = class(TksBroadcastingProtocol)
   private
-    FSocket: TSocket;
+    FSocket: Winapi.Winsock2.TSocket;
     FRemoteEndPoint: TNetEndPoint;
     listener: ITask;
     procedure listenerWork;
+    class function CheckSocketResult(ResultCode: integer;
+      const Op: string): integer;
   protected
 {$IFDEF DEBUG}
     procedure debugInvalidMessage(strm: TBytesStream); override;
@@ -30,7 +33,7 @@ type
     procedure Close;
     procedure Open(const endPoint: TNetEndPoint;
       const displayName, connectionPassword, commandPassword: string;
-      msUpdateInterval: Integer = 1000);
+      msUpdateInterval: integer = 1000);
     property isConnected;
   end;
 
@@ -95,24 +98,54 @@ type
 
 implementation
 
-// uses
-// System.SysUtils;
+uses
+  System.Netconsts;
 
 // ----------------------------------------------------------------------------
 // TksBroadcastingProtocolUDPImpl
 // ----------------------------------------------------------------------------
 
+class function TksBroadcastingProtocolUDPImpl.CheckSocketResult
+  (ResultCode: integer; const Op: string): integer;
+begin
+  if ResultCode < 0 then
+  begin
+    Result := WSAGetLastError;
+    if Result <> WSAEWOULDBLOCK then
+      raise ESocketError.CreateResFmt(@sSocketError,
+        [SysErrorMessage(Result), Result, Op]);
+  end
+  else
+    Result := 0;
+end;
+
 constructor TksBroadcastingProtocolUDPImpl.Create;
+var
+  addr: sockaddr_in;
 begin
   inherited Create;
-  FSocket := TSocket.Create(TSocketType.UDP);
-  listener := nil;
+  FSocket := Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (FSocket = INVALID_SOCKET) then
+    raise ESocketError.Create('socket creation failed with code ' +
+      WSAGetLastError.ToString);
+  try
+    addr.sin_family := AF_INET;
+    addr.sin_port := 0;
+    addr.sin_addr.S_addr := INADDR_ANY;
+    CheckSocketResult(bind(FSocket, sockaddr(addr), SizeOf(addr)), 'bind');
+    listener := TTask.Create(listenerWork);
+    listener.Start;
+  except
+    closesocket(FSocket);
+    FSocket := INVALID_SOCKET;
+    raise;
+  end;
 end;
 
 destructor TksBroadcastingProtocolUDPImpl.Destroy;
 begin
-  Close;
-  FSocket.Free;
+  closesocket(FSocket);
+  listener.Cancel;
   inherited;
 end;
 
@@ -123,8 +156,11 @@ begin
   active := true;
   while (active) do
     try
+      listener.CheckCanceled;
       ProcessMessage;
     except
+      on EOperationCancelled do
+        active := false;
       on ESocketError do
         active := false;
       else;
@@ -133,47 +169,53 @@ end;
 
 procedure TksBroadcastingProtocolUDPImpl.Open(const endPoint: TNetEndPoint;
   const displayName, connectionPassword, commandPassword: string;
-  msUpdateInterval: Integer);
+  msUpdateInterval: integer);
 begin
-  // if (not(TSocketState.connected in FSocket.state)) then
-  // begin
-  FRemoteEndPoint := endPoint;
-  FSocket.Bind(0);
-  RequestConnection(displayName, connectionPassword, msUpdateInterval,
-    commandPassword);
-  listener := TTask.Create(listenerWork);
-  listener.Start;
-  // end
-  // else
-  // raise Exception.Create('Already open');
+  if (not isConnected) then
+  begin
+    FRemoteEndPoint := endPoint;
+    RequestConnection(displayName, connectionPassword, msUpdateInterval,
+      commandPassword)
+  end
+  else
+    raise ESocketError.Create('Already open');
 end;
 
 procedure TksBroadcastingProtocolUDPImpl.Close;
 begin
-  if (TSocketState.connected in FSocket.state) then
-  begin
-    RequestDisconnect;
-    FSocket.Close;
-  end;
+  RequestDisconnect;
 end;
 
 procedure TksBroadcastingProtocolUDPImpl.SendMessage(const outStrm
   : TBytesStream);
+var
+  addr: sockaddr_in;
+  Result: integer;
 begin
-  FSocket.SendTo(outStrm.Bytes, FRemoteEndPoint, 0, outStrm.Size);
+  addr := FRemoteEndPoint;
+  Result := Winapi.Winsock2.SendTo(FSocket, outStrm.Bytes[0], outStrm.Size, 0,
+    @addr, SizeOf(addr));
+  CheckSocketResult(Result, 'sendto');
 end;
 
 function TksBroadcastingProtocolUDPImpl.ReceiveMessage: TBytesStream;
 var
-  Data: TBytes;
-  ep: TNetEndPoint;
-  count: Integer;
+  Buffer: TBytes;
+  Sender: sockaddr_in;
+  aux: integer;
+  receivedSize: integer;
 begin
-  repeat
-    Data := FSocket.ReceiveFrom;
-  until (Length(Data) > 0);
-
-  Result := TBytesStream.Create(Data);
+  SetLength(Buffer, 4096);
+  aux := SizeOf(Sender);
+  // repeat
+  FillChar(Sender, aux, 0);
+  receivedSize := Winapi.Winsock2.recvfrom(FSocket, Buffer[0], Length(Buffer),
+    0, Psockaddr(@Sender)^, aux);
+  CheckSocketResult(receivedSize, 'recvfrom');
+  // until (Sender.sin_addr.S_addr = FRemoteEndPoint.Address.addr.S_addr);
+  Result := TBytesStream.Create;
+  Result.WriteBuffer(Buffer, receivedSize);
+  Result.Position := 0;
 end;
 
 {$IFDEF DEBUG}
@@ -220,8 +262,6 @@ end;
 procedure TksUDPProtocol.doOnRegistrationResult(const connectionId: Int32;
   const success, isReadOnly: boolean; const errMsg: string);
 begin
-  if (not success) then
-    FSocket.Close;
   if (Assigned(FOnConnection)) then
   begin
     if (FsynchronizedEvents) then
@@ -372,5 +412,19 @@ begin
       end;
   end;
 end;
+
+var
+  WSAerr: integer;
+  wsaInitData: TWSAData;
+
+initialization
+
+WSAerr := WSAStartup(514, wsaInitData);
+if (WSAerr <> 0) then
+  raise ESocketError.Create('Sockets library unavailable');
+
+finalization
+
+WSACleanup;
 
 end.
