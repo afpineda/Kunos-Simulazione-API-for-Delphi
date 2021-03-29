@@ -27,60 +27,101 @@ unit ksBroadcasting;
 interface
 
 uses
-  ksBroadcasting.Data,
   System.Classes,
-  System.SyncObjs,
-  System.Generics.Collections;
+  ksBroadcasting.Data;
+
+{
+  SUMMARY:
+
+  - IksMessageDelegate: interface to implementa data transmision
+  - TksBroadcastingMsgHandler: Message handler for broadcasting protocol
+}
 
 type
-  TksBroadcastingProtocol = class
+  IksMessageDelegate = interface
+    {
+      PURPOUSE:
+      To delegate actual message sending and receiving. The broadcasting
+      protocol is independant from the transport layer, but datagram-oriented.
+
+      GENERAL USAGE:
+      Implement this interface in order to perform actual message sending/
+      receiving. Messages/datagrams are TBytesStream instances.
+
+      START:
+      Called once at protocol instantiation. Should perform some kind of
+      initialization, like socket creation and binding.
+
+      STOP:
+      Called once at protocol instace destruction. Should unblock any pending
+      thread at "ReceiveFrom". For example, by closing a socket.
+
+      SendTo:
+      Send datagram. Non-blocking.
+
+      ReceiveFrom:
+      Receive datagram. Blocking. Caller should destroy received stream.
+    }
+    procedure Start;
+    procedure Stop;
+    procedure SendTo(Data: TBytesStream);
+    function ReceiveFrom: TBytesStream;
+  end;
+
+type
+  TksBroadcastingMsgHandler = class
+    {
+      PURPOUSE:
+      To handle broadcasting protocol messages. Both sending and receiving.
+
+      GENERAL USAGE:
+      Abstract class. Actual message processing is left to descendant classes.
+
+      ProcessMessage:
+      Should be called at regular intervals. Waits for a datagram,
+      decodes a message, and calls the corresponding "Msg" method.
+
+      MSG:
+      Any object passed to "Msg" (TKsCarInfo or TksTrackData) should be
+      destroyed by the descendant class.
+    }
   public const
     BROADCASTING_PROTOCOL_VERSION = 4;
   private
-    FEntryList: TObjectList<TksCarInfo>;
     FConnectionID: Int32;
-    FExpectedEntryListCount: UInt16;
+    FMessageDelegate: IksMessageDelegate;
     lastEntrylistRequest: TDateTime;
-    function GetIsConnected: boolean;
+    function GetRegistered: boolean;
   protected
-    procedure debugInvalidMessage(stream: TBytesStream); virtual;
-    function ReceiveMessage: TBytesStream; virtual; abstract;
     procedure ProcessMessage;
-    procedure RequestConnection(const displayName: string;
-      const connectionPassword: string; const msUpdateInterval: Int32;
-      const commandPassword: string);
-    procedure RequestDisconnect;
-    procedure SendMessage(const outStrm: TBytesStream); virtual; abstract;
-    procedure doOnBroadcastingEvent(const event: TksBroadcastingEvent);
+    procedure Msg(const result: TKsRegistrationResult); overload;
       virtual; abstract;
-    procedure doOnEntryListCar(const carInfo: TksCarInfo); virtual;
-    procedure doOnEntryListComplete; virtual;
-    procedure doOnNewEntryList(const entryCount: WORD); virtual;
-    procedure doOnRealTimeCarUpdate(const carData: TksCarData);
+    procedure Msg(const sessionData: TksSessionData); overload;
       virtual; abstract;
-    procedure doOnRealTimeUpdate(const sessionData: TksSessionData);
+    procedure Msg(const carData: TksCarData); overload; virtual; abstract;
+    procedure Msg(const carInfo: TKsCarInfo); overload; virtual; abstract;
+    procedure Msg(const carEntryCount: integer); overload; virtual; abstract;
+    procedure Msg(const trackData: TksTrackData); overload; virtual; abstract;
+    procedure Msg(const event: TksBroadcastingEvent); overload;
       virtual; abstract;
-    procedure doOnRegistrationResult(const connectionId: Int32;
-      const success, isReadOnly: boolean; const errMsg: string);
-      virtual; abstract;
-    procedure doOnTrackData(const trackData: TksTrackData); virtual; abstract;
-    property InternalEntryList: TObjectList<TksCarInfo> read FEntryList;
     property connectionId: Int32 read FConnectionID;
-    property isConnected: boolean read GetIsConnected;
+    property MessageDelegate: IksMessageDelegate read FMessageDelegate;
   public
-    constructor Create;
-    destructor Destroy; override;
+    constructor Create(msgDelegate: IksMessageDelegate);
+    procedure Register(const displayName: string;
+      const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
+      const commandPassword: string = '');
+    procedure Unregister;
     procedure RequestEntryList(const force: boolean = false);
     procedure RequestFocus(const carIndex: UInt16; const cameraSet: string = '';
       const camera: string = ''); overload;
-    procedure RequestFocus(const carRaceNumber: Integer;
-      const cameraSet: string = ''; const camera: string = ''); overload;
     procedure RequestFocus(const cameraSet, camera: string); overload;
     procedure RequestInstantReplay(const startSessionTime, durationMS: Single;
       const initialFocusedCarIndex: Int32 = -1;
       const initialCameraSet: string = ''; const initialCamera: string = '');
     procedure RequestHUDPage(const HUDPage: string);
     procedure RequestTrackData;
+    property Registered: boolean read GetRegistered;
   end;
 
 implementation
@@ -103,47 +144,38 @@ type
     REALTIME_CAR_UPDATE = 3, ENTRY_LIST = 4, ENTRY_LIST_CAR = 6, TRACK_DATA = 5,
     BROADCASTING_EVENT = 7);
 
-constructor TksBroadcastingProtocol.Create;
+  // --------------------------------------------------------------------------
+  // TksBroadcastingMsgHandler
+  // --------------------------------------------------------------------------
+
+constructor TksBroadcastingMsgHandler.Create(msgDelegate: IksMessageDelegate);
 begin
-  FEntryList := TObjectList<TksCarInfo>.Create;
-  FEntryList.OwnsObjects := true;
-  FConnectionID := -1;
-  lastEntrylistRequest := Now;
+  if (msgDelegate <> nil) then
+  begin
+    FConnectionID := -1;
+    lastEntrylistRequest := Now;
+    FMessageDelegate := msgDelegate;
+  end
+  else
+    raise Exception.Create('TksBroadcastingProtocol: message delegate is null');
 end;
 
-destructor TksBroadcastingProtocol.Destroy;
-begin
-  FEntryList.Free;
-  inherited;
-end;
+// ---- INBOUND MESSAGES
 
-// --------------------------------------------------------------------------
-// INBOUND MESSAGES
-// --------------------------------------------------------------------------
-
-procedure TksBroadcastingProtocol.ProcessMessage;
+procedure TksBroadcastingMsgHandler.ProcessMessage;
 var
-  inStrm: TBytesStream;
+  inStrm: TStream;
 
   procedure Process_REGISTRATION_RESULT;
   var
-    isReadOnly: BYTE;
-    success: BYTE;
-    errMsg: string;
+    result: TKsRegistrationResult;
   begin
-    inStrm.ReadBuffer(FConnectionID, sizeof(FConnectionID));
-    inStrm.ReadBuffer(success, sizeof(isReadOnly));
-    inStrm.ReadBuffer(isReadOnly, sizeof(isReadOnly));
-    errMsg := ReadString(inStrm);
-    if (success <> 0) then
-    begin
-      RequestEntryList(true);
-      RequestTrackData;
-    end
+    result.readFromStream(inStrm);
+    if (result.Success) then
+      FConnectionID := result.connectionId
     else
       FConnectionID := -1;
-    doOnRegistrationResult(FConnectionID, (success <> 0),
-      (isReadOnly = 0), errMsg);
+    Msg(result);
   end;
 
   procedure Process_REALTIME_UPDATE;
@@ -151,75 +183,51 @@ var
     sessionData: TksSessionData;
   begin
     sessionData.readFromStream(inStrm);
-    doOnRealTimeUpdate(sessionData);
+    Msg(sessionData);
   end;
 
   procedure Process_REALTIME_CAR_UPDATE;
   var
-    carInfo: TksCarInfo;
     carData: TksCarData;
   begin
     carData.readFromStream(inStrm);
-    carInfo := TksCarInfo.findCarInfo(FEntryList, carData.carIndex);
-    if (carInfo = nil) or (carInfo.Drivers.Count<>carData.DriverCount) then
-      RequestEntryList
-    else
-      doOnRealTimeCarUpdate(carData);
+    Msg(carData);
   end;
 
   procedure Process_ENTRY_LIST;
   var
-    connId, i: Int32;
+    connId: Int32;
     carEntryCount: UInt16;
-    carIdx: UInt16;
   begin
     inStrm.ReadBuffer(connId, sizeof(connId));
-    inStrm.ReadBuffer(carEntryCount, sizeof(carEntryCount));
-    FEntryList.Clear;
-    for i := 0 to carEntryCount - 1 do
+    if (connId = FConnectionID) then
     begin
-      inStrm.ReadBuffer(carIdx, sizeof(carIdx));
-      FEntryList.Add(TksCarInfo.Create(carIdx));
+      inStrm.ReadBuffer(carEntryCount, sizeof(carEntryCount));
+      Msg(carEntryCount);
     end;
-    FExpectedEntryListCount := 0;
-    doOnNewEntryList(carEntryCount);
   end;
 
   procedure Process_ENTRY_LIST_CAR;
   var
-    carInfo: TksCarInfo;
-    carIdx: UInt16;
+    carInfo: TKsCarInfo;
   begin
-    inStrm.ReadBuffer(carIdx, sizeof(carIdx));
-    carInfo := TksCarInfo.findCarInfo(FEntryList, carIdx);
-    if (carInfo <> nil) then
-    begin
-      if (carInfo.CarModelType = 0) and (carInfo.CarModelType = 0) and
-        (carInfo.TeamName = '') then
-        inc(FExpectedEntryListCount);
-      carInfo.readFromStream(inStrm);
-      doOnEntryListCar(carInfo);
-      if (FExpectedEntryListCount = FEntryList.Count) then
-      begin
-        // avoid repetitive events
-        FExpectedEntryListCount := High(FExpectedEntryListCount);
-        // Notify event
-        doOnEntryListComplete;
-      end;
-    end
-    else
-      RequestEntryList;
+    carInfo := TKsCarInfo.Create;
+    carInfo.readFromStream(inStrm);
+    Msg(carInfo);
   end;
 
   procedure Process_TRACK_DATA;
   var
     trackData: TksTrackData;
-    connId: Integer;
+    connId: integer;
   begin
     inStrm.ReadBuffer(connId, sizeof(connId));
-    trackData := TksTrackData.Create;
-    trackData.readFromStream(inStrm);
-    doOnTrackData(trackData);
+    if (connId = FConnectionID) then
+    begin
+      trackData := TksTrackData.Create;
+      trackData.readFromStream(inStrm);
+      Msg(trackData);
+    end;
   end;
 
   procedure Process_BROADCASTING_EVENT;
@@ -227,15 +235,16 @@ var
     evt: TksBroadcastingEvent;
   begin
     evt.readFromStream(inStrm);
-    doOnBroadcastingEvent(evt);
+    Msg(evt);
   end;
 
 var
   msgType: TksInboundMT;
 begin
-  inStrm := ReceiveMessage;
-  if (inStrm <> nil) and (inStrm.Size > 0) then
-    try
+  inStrm := MessageDelegate.ReceiveFrom;
+  try
+    if (inStrm <> nil) and (inStrm.Size > 0) then
+    begin
       inStrm.ReadBuffer(msgType, sizeof(msgType));
       case msgType of
         TksInboundMT.REGISTRATION_RESULT:
@@ -253,57 +262,50 @@ begin
         TksInboundMT.BROADCASTING_EVENT:
           Process_BROADCASTING_EVENT;
       end;
-    finally
-      inStrm.Free;
     end
-  else
-  begin
-{$IFDEF DEBUG }
-    debugInvalidMessage(inStrm);
-{$ENDIF}
+  finally
     inStrm.Free;
   end;
 end;
 
-// --------------------------------------------------------------------------
-// AUXILIARY
-// --------------------------------------------------------------------------
+// ---- AUXILIARY
 
-function TksBroadcastingProtocol.GetIsConnected: boolean;
+function TksBroadcastingMsgHandler.GetRegistered: boolean;
 begin
-  Result := (FConnectionID >= 0);
+  result := (FConnectionID >= 0);
 end;
 
-// --------------------------------------------------------------------------
-// OUTBOUND MESSAGES
-// --------------------------------------------------------------------------
+// ---- OUTBOUND MESSAGES
 
-procedure TksBroadcastingProtocol.RequestConnection(const displayName: string;
+procedure TksBroadcastingMsgHandler.Register(const displayName: string;
   const connectionPassword: string; const msUpdateInterval: Int32;
   const commandPassword: string);
 const
   version: BYTE = BROADCASTING_PROTOCOL_VERSION;
-  msg: TksOutboundMT = TksOutboundMT.REGISTER_COMMAND_APPLICATION;
+  Msg: TksOutboundMT = TksOutboundMT.REGISTER_COMMAND_APPLICATION;
 var
   outStrm: TBytesStream;
 begin
-  outStrm := TBytesStream.Create;
-  try
-    outStrm.WriteBuffer(msg, sizeof(msg));
-    outStrm.WriteBuffer(version, sizeof(version));
-    WriteString(outStrm, displayName);
-    WriteString(outStrm, connectionPassword);
-    outStrm.WriteBuffer(msUpdateInterval, sizeof(msUpdateInterval));
-    WriteString(outStrm, commandPassword);
-    SendMessage(outStrm);
-  finally
-    outStrm.Free;
+  if (FConnectionID < 0) then
+  begin
+    outStrm := TBytesStream.Create;
+    try
+      outStrm.WriteBuffer(Msg, sizeof(Msg));
+      outStrm.WriteBuffer(version, sizeof(version));
+      WriteString(outStrm, displayName);
+      WriteString(outStrm, connectionPassword);
+      outStrm.WriteBuffer(msUpdateInterval, sizeof(msUpdateInterval));
+      WriteString(outStrm, commandPassword);
+      MessageDelegate.SendTo(outStrm);
+    finally
+      outStrm.Free;
+    end;
   end;
 end;
 
-procedure TksBroadcastingProtocol.RequestDisconnect;
+procedure TksBroadcastingMsgHandler.Unregister;
 const
-  msg: TksOutboundMT = TksOutboundMT.UNREGISTER_COMMAND_APPLICATION;
+  Msg: TksOutboundMT = TksOutboundMT.UNREGISTER_COMMAND_APPLICATION;
 var
   outStrm: TBytesStream;
 begin
@@ -311,8 +313,9 @@ begin
   begin
     outStrm := TBytesStream.Create;
     try
-      outStrm.WriteBuffer(msg, sizeof(msg));
-      SendMessage(outStrm);
+      outStrm.WriteBuffer(Msg, sizeof(Msg));
+      outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
+      MessageDelegate.SendTo(outStrm);
       FConnectionID := -1;
     finally
       outStrm.Free;
@@ -320,155 +323,137 @@ begin
   end;
 end;
 
-procedure TksBroadcastingProtocol.RequestEntryList(const force: boolean);
+procedure TksBroadcastingMsgHandler.RequestEntryList(const force: boolean);
 const
-  msg: TksOutboundMT = TksOutboundMT.REQUEST_ENTRY_LIST;
+  Msg: TksOutboundMT = TksOutboundMT.REQUEST_ENTRY_LIST;
 var
   outStrm: TBytesStream;
 begin
-  if (force) or (SecondsBetween(Now, lastEntrylistRequest) > 1) then
+  if (FConnectionID >= 0) then
+    if (force) or (SecondsBetween(Now, lastEntrylistRequest) > 1) then
+    begin
+      outStrm := TBytesStream.Create;
+      try
+        outStrm.WriteBuffer(Msg, sizeof(Msg));
+        outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
+        MessageDelegate.SendTo(outStrm);
+        lastEntrylistRequest := Now;
+      finally
+        outStrm.Free;
+      end;
+    end;
+end;
+
+procedure TksBroadcastingMsgHandler.RequestTrackData;
+const
+  Msg: TksOutboundMT = TksOutboundMT.REQUEST_TRACK_DATA;
+var
+  outStrm: TBytesStream;
+begin
+  if (FConnectionID >= 0) then
   begin
     outStrm := TBytesStream.Create;
     try
-      outStrm.WriteBuffer(msg, sizeof(msg));
+      outStrm.WriteBuffer(Msg, sizeof(Msg));
       outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
-      SendMessage(outStrm);
-      lastEntrylistRequest := Now;
+      MessageDelegate.SendTo(outStrm);
     finally
       outStrm.Free;
     end;
   end;
 end;
 
-procedure TksBroadcastingProtocol.RequestTrackData;
-const
-  msg: TksOutboundMT = TksOutboundMT.REQUEST_TRACK_DATA;
-var
-  outStrm: TBytesStream;
-begin
-  outStrm := TBytesStream.Create;
-  try
-    outStrm.WriteBuffer(msg, sizeof(msg));
-    outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
-    SendMessage(outStrm);
-  finally
-    outStrm.Free;
-  end;
-end;
-
-procedure TksBroadcastingProtocol.RequestFocus(const carIndex: UInt16;
+procedure TksBroadcastingMsgHandler.RequestFocus(const carIndex: UInt16;
   const cameraSet: string; const camera: string);
 const
-  msg: TksOutboundMT = TksOutboundMT.CHANGE_FOCUS;
+  Msg: TksOutboundMT = TksOutboundMT.CHANGE_FOCUS;
   aux0: BYTE = 0;
   aux1: BYTE = 1;
 var
   outStrm: TBytesStream;
 begin
-  outStrm := TBytesStream.Create;
-  try
-    outStrm.WriteBuffer(msg, sizeof(msg));
-    outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
-    outStrm.WriteBuffer(carIndex, sizeof(carIndex));
-    if (carIndex < High(carIndex)) then
-    begin
-      outStrm.WriteBuffer(aux1, sizeof(aux1));
+  if (FConnectionID >= 0) then
+  begin
+    outStrm := TBytesStream.Create;
+    try
+      outStrm.WriteBuffer(Msg, sizeof(Msg));
+      outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
       outStrm.WriteBuffer(carIndex, sizeof(carIndex));
-    end
-    else
-      outStrm.WriteBuffer(aux0, sizeof(aux0));
-    if (cameraSet <> '') and (camera <> '') then
-    begin
-      outStrm.WriteBuffer(aux1, sizeof(aux1));
-      WriteString(outStrm, cameraSet);
-      WriteString(outStrm, camera);
-    end
-    else
-      outStrm.WriteBuffer(aux0, sizeof(aux0));
-    SendMessage(outStrm);
-  finally
-    outStrm.Free;
+      if (carIndex < High(carIndex)) then
+      begin
+        outStrm.WriteBuffer(aux1, sizeof(aux1));
+        outStrm.WriteBuffer(carIndex, sizeof(carIndex));
+      end
+      else
+        outStrm.WriteBuffer(aux0, sizeof(aux0));
+      if (cameraSet <> '') and (camera <> '') then
+      begin
+        outStrm.WriteBuffer(aux1, sizeof(aux1));
+        WriteString(outStrm, cameraSet);
+        WriteString(outStrm, camera);
+      end
+      else
+        outStrm.WriteBuffer(aux0, sizeof(aux0));
+      MessageDelegate.SendTo(outStrm);
+    finally
+      outStrm.Free;
+    end;
   end;
 end;
 
-procedure TksBroadcastingProtocol.RequestFocus(const carRaceNumber: Integer;
-  const cameraSet: string = ''; const camera: string = '');
-var
-  carInfo: TksCarInfo;
-begin
-  carInfo := TksCarInfo.findRaceNumber(InternalEntryList, carRaceNumber);
-  if (carInfo <> nil) then
-    RequestFocus(UInt16(carInfo.carIndex), cameraSet, camera);
-end;
-
-procedure TksBroadcastingProtocol.RequestFocus(const cameraSet, camera: string);
+procedure TksBroadcastingMsgHandler.RequestFocus(const cameraSet,
+  camera: string);
 begin
   RequestFocus(High(UInt16), cameraSet, camera);
 end;
 
-procedure TksBroadcastingProtocol.RequestInstantReplay(const startSessionTime,
+procedure TksBroadcastingMsgHandler.RequestInstantReplay(const startSessionTime,
   durationMS: Single; const initialFocusedCarIndex: Int32 = -1;
   const initialCameraSet: string = ''; const initialCamera: string = '');
 const
-  msg: TksOutboundMT = TksOutboundMT.INSTANT_REPLAY_REQUEST;
+  Msg: TksOutboundMT = TksOutboundMT.INSTANT_REPLAY_REQUEST;
 var
   outStrm: TBytesStream;
 begin
-  outStrm := TBytesStream.Create;
-  try
-    outStrm.WriteBuffer(msg, sizeof(msg));
-    outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
-    outStrm.WriteBuffer(startSessionTime, sizeof(startSessionTime));
-    outStrm.WriteBuffer(durationMS, sizeof(durationMS));
-    outStrm.WriteBuffer(initialFocusedCarIndex, sizeof(initialFocusedCarIndex));
-    WriteString(outStrm, initialCameraSet);
-    WriteString(outStrm, initialCamera);
-    SendMessage(outStrm);
-  finally
-    outStrm.Free;
+  if (FConnectionID >= 0) then
+  begin
+    outStrm := TBytesStream.Create;
+    try
+      outStrm.WriteBuffer(Msg, sizeof(Msg));
+      outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
+      outStrm.WriteBuffer(startSessionTime, sizeof(startSessionTime));
+      outStrm.WriteBuffer(durationMS, sizeof(durationMS));
+      outStrm.WriteBuffer(initialFocusedCarIndex,
+        sizeof(initialFocusedCarIndex));
+      WriteString(outStrm, initialCameraSet);
+      WriteString(outStrm, initialCamera);
+      MessageDelegate.SendTo(outStrm);
+    finally
+      outStrm.Free;
+    end;
   end;
 end;
 
-procedure TksBroadcastingProtocol.RequestHUDPage(const HUDPage: string);
+procedure TksBroadcastingMsgHandler.RequestHUDPage(const HUDPage: string);
 const
-  msg: TksOutboundMT = TksOutboundMT.CHANGE_HUD_PAGE;
+  Msg: TksOutboundMT = TksOutboundMT.CHANGE_HUD_PAGE;
 var
   outStrm: TBytesStream;
 begin
-  outStrm := TBytesStream.Create;
-  try
-    outStrm.WriteBuffer(msg, sizeof(msg));
-    outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
-    WriteString(outStrm, HUDPage);
-    SendMessage(outStrm);
-  finally
-    outStrm.Free;
+  if (FConnectionID >= 0) then
+  begin
+    outStrm := TBytesStream.Create;
+    try
+      outStrm.WriteBuffer(Msg, sizeof(Msg));
+      outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
+      WriteString(outStrm, HUDPage);
+      MessageDelegate.SendTo(outStrm);
+    finally
+      outStrm.Free;
+    end;
   end;
 end;
 
-// --------------------------------------------------------------------------
-// DEFAULT EVENT HANDLERS
-// --------------------------------------------------------------------------
-
-procedure TksBroadcastingProtocol.doOnNewEntryList(const entryCount: WORD);
-begin
-  // Do nothing. Override if needed.
-end;
-
-procedure TksBroadcastingProtocol.doOnEntryListComplete;
-begin
-  // Do nothing. Override if needed.
-end;
-
-procedure TksBroadcastingProtocol.doOnEntryListCar(const carInfo: TksCarInfo);
-begin
-  // Do nothing. Override if needed.
-end;
-
-procedure TksBroadcastingProtocol.debugInvalidMessage(stream: TBytesStream);
-begin
-  // Do nothing. Override if needed.
-end;
 
 // ----------------------------------------------------------------------------
 

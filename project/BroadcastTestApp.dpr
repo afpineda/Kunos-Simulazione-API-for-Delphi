@@ -5,7 +5,8 @@ uses
   BroadcastTestApp_main in '..\sources\BroadcastTestApp\BroadcastTestApp_main.pas' {Form_main},
   ksBroadcasting in '..\sources\ksBroadcasting.pas',
   ksBroadcasting.Data in '..\sources\ksBroadcasting.Data.pas',
-  ksBroadcasting.UDP in '..\sources\ksBroadcasting.UDP.pas';
+  ksBroadcasting.UDP in '..\sources\ksBroadcasting.UDP.pas',
+  ksBroadcasting.Protocol in '..\sources\ksBroadcasting.Protocol.pas';
 
 {$R *.res}
 

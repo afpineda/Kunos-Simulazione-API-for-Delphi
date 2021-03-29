@@ -31,8 +31,9 @@ uses
   System.Classes, Vcl.Graphics,
   System.Generics.Collections,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.Grids,
-  ksBroadcasting.UDP, ksBroadcasting.Data, Vcl.ValEdit;
+  Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.Grids, Vcl.ValEdit,
+  ksBroadcasting.Protocol,
+  ksBroadcasting.UDP, ksBroadcasting.Data;
 
 type
   TForm_main = class(TForm)
@@ -78,20 +79,19 @@ type
     procedure Btn_ForceTrackDataClick(Sender: TObject);
   private
     { Private declarations }
-    UDP: TksUDPProtocol;
-    procedure OnConnection(Sender: TksUDPProtocol;
-      const connected, isReadOnly: Boolean; const errMsg: string);
-    procedure OnEntryList(Sender: TksUDPProtocol;
-      NewList: TObjectList<TKsCarInfo>);
-    procedure OnEntryListUpdate(Sender: TksUDPProtocol;
-      const carInfo: TKsCarInfo);
-    procedure OnCarDataUpdate(Sender: TksUDPProtocol;
+    UDP: TksUDPDelegate;
+    Protocol: TksBroadcastingProtocol;
+    procedure OnConnection(Sender: TksBroadcastingProtocol;
+      const result: TKsRegistrationResult);
+    procedure OnEntryList(Sender: TksBroadcastingProtocol;
+      NewList: TksEntryList);
+    procedure OnCarDataUpdate(Sender: TksBroadcastingProtocol;
       const carInfo: TKsCarData);
-    procedure OnSessionDataUpdate(Sender: TksUDPProtocol;
+    procedure OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
       const sessionData: TKsSessionData);
-    procedure OnTrackData(Sender: TksUDPProtocol;
-      const trackData: TksTrackData);
-    procedure OnBroadcastingEvent(Sender: TksUDPProtocol;
+    procedure OnTrackData(Sender: TksBroadcastingProtocol;
+      trackData: TksTrackData);
+    procedure OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent);
   public
     { Public declarations }
@@ -103,6 +103,7 @@ var
 implementation
 
 uses
+  Winapi.Winsock2,
   System.Net.Socket;
 
 {$R *.dfm}
@@ -110,23 +111,24 @@ uses
 // TksUDPProtocol events
 // ----------------------------------------------------------------------------
 
-procedure TForm_main.OnConnection(Sender: TksUDPProtocol;
-  const connected, isReadOnly: Boolean; const errMsg: string);
+procedure TForm_main.OnConnection(Sender: TksBroadcastingProtocol;
+  const result: TKsRegistrationResult);
 begin
-  Memo_Log.Lines.Add('Connection result: ' + errMsg);
-  if (connected and isReadOnly) then
-    Memo_Log.Lines.Add('Connected as read-only')
-  else if (connected) then
-    Memo_Log.Lines.Add('Connected')
-  else
-  begin
-    Memo_Log.Lines.Add('Rejected');
-  end;
+  Memo_Log.Lines.Add('Registration result: ' + result.ErrorMessage);
+  with result do
+    if (success and ReadOnly) then
+      Memo_Log.Lines.Add('Connected as read-only')
+    else if (success) then
+      Memo_Log.Lines.Add('Connected')
+    else
+    begin
+      Memo_Log.Lines.Add('Rejected');
+    end;
   List_CarData.Items.Clear;
 end;
 
-procedure TForm_main.OnEntryList(Sender: TksUDPProtocol;
-  NewList: TObjectList<TKsCarInfo>);
+procedure TForm_main.OnEntryList(Sender: TksBroadcastingProtocol;
+  NewList: TksEntryList);
 var
   i, j, rc: Integer;
 begin
@@ -174,14 +176,7 @@ begin
   NewList.Free;
 end;
 
-procedure TForm_main.OnEntryListUpdate(Sender: TksUDPProtocol;
-  const carInfo: TKsCarInfo);
-begin
-  Memo_Log.Lines.Add('Entry list updated. Requesting.');
-  UDP.RequestEntryList;
-end;
-
-procedure TForm_main.OnCarDataUpdate(Sender: TksUDPProtocol;
+procedure TForm_main.OnCarDataUpdate(Sender: TksBroadcastingProtocol;
   const carInfo: TKsCarData);
 var
   item: TListItem;
@@ -200,7 +195,7 @@ begin
   item.SubItems.Add(carInfo.LastLap.laptimeMS.ToString);
 end;
 
-procedure TForm_main.OnSessionDataUpdate(Sender: TksUDPProtocol;
+procedure TForm_main.OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
   const sessionData: TKsSessionData);
 begin
   // Memo_Log.Lines.Add('Session data updated');
@@ -222,8 +217,8 @@ begin
   end;
 end;
 
-procedure TForm_main.OnTrackData(Sender: TksUDPProtocol;
-  const trackData: TksTrackData);
+procedure TForm_main.OnTrackData(Sender: TksBroadcastingProtocol;
+  trackData: TksTrackData);
 var
   camSet: string;
   j: Integer;
@@ -247,10 +242,10 @@ begin
   trackData.Free;
 end;
 
-procedure TForm_main.OnBroadcastingEvent(Sender: TksUDPProtocol;
+procedure TForm_main.OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
   const event: TksBroadcastingEvent);
 begin
-   Memo_Log.Lines.Add('BROADCASTING EVENT: '+event.messageText);
+  Memo_Log.Lines.Add('BROADCASTING EVENT: ' + event.messageText);
 end;
 
 // ----------------------------------------------------------------------------
@@ -263,16 +258,14 @@ begin
 end;
 
 procedure TForm_main.Btn_connectClick(Sender: TObject);
-var
-  endpoint: TNetEndPoint;
 begin
-  endpoint.Family := 2;
-  endpoint.SetAddress(Edt_Host.Text);
-  endpoint.Port := StrToInt(Edt_Port.Text);
   try
-    UDP.Open(endpoint, 'Delphi demo', Edt_ConnPwd.Text,
-      Edt_CommandPwd.Text, 10000);
-    Memo_Log.Lines.Add('Connection request sent to ' + Edt_Host.Text + ':' +
+    UDP.RemoteEndPoint.Family := 2;
+    UDP.RemoteEndPoint.SetAddress(Edt_Host.Text);
+    UDP.RemoteEndPoint.Port := StrToInt(Edt_Port.Text);
+    Protocol.Register('Delphi demo', Edt_ConnPwd.Text, 5000,
+      Edt_CommandPwd.Text);
+    Memo_Log.Lines.Add('Registration request sent to ' + Edt_Host.Text + ':' +
       Edt_Port.Text);
   except
     on E: Exception do
@@ -294,8 +287,8 @@ end;
 procedure TForm_main.Btn_DisconnectClick(Sender: TObject);
 begin
   try
-    UDP.Close;
-    Memo_Log.Lines.Add('Connection closed');
+    Protocol.Unregister;
+    Memo_Log.Lines.Add('Unregistration requested');
   except
     on E: Exception do
     begin
@@ -316,7 +309,7 @@ begin
   begin
     Memo_Log.Lines.Add('Requesting Camera: ' + LV_Cam.Selected.Caption + '/' +
       LV_Cam.Selected.SubItems[0]);
-    UDP.RequestFocus(LV_Cam.Selected.Caption, LV_Cam.Selected.SubItems[0]);
+    // Protocol.RequestFocus(LV_Cam.Selected.Caption, LV_Cam.Selected.SubItems[0]);
   end;
 end;
 
@@ -325,14 +318,14 @@ begin
   if (LV_HUD.Selected <> nil) then
   begin
     Memo_Log.Lines.Add('Requesting HUD page: ' + LV_HUD.Selected.Caption);
-    UDP.RequestHUDPage(LV_HUD.Selected.Caption);
+    Protocol.RequestHUDPage(LV_HUD.Selected.Caption);
   end;
 end;
 
 procedure TForm_main.Btn_ForceTrackDataClick(Sender: TObject);
 begin
   Memo_Log.Lines.Add('Requesting track data');
-  UDP.RequestTrackData;
+  Protocol.RequestTrackData;
 end;
 
 // ----------------------------------------------------------------------------
@@ -341,14 +334,14 @@ end;
 
 procedure TForm_main.FormCreate(Sender: TObject);
 begin
-  UDP := TksUDPProtocol.Create;
-  UDP.OnConnection := OnConnection;
-  UDP.OnEntryList := OnEntryList;
-  UDP.OnEntryListUpdate := OnEntryListUpdate;
-  UDP.OnCarDataUpdate := OnCarDataUpdate;
-  UDP.OnSessionDataUpdate := OnSessionDataUpdate;
-  UDP.OnTrackData := OnTrackData;
-  UDP.OnBroadcastingEvent := OnBroadcastingEvent;
+  UDP := TksUDPDelegate.Create;
+  Protocol := TksBroadcastingProtocol.Create(UDP);
+  Protocol.OnRegistration := OnConnection;
+  Protocol.OnEntryList := OnEntryList;
+  Protocol.OnCarData := OnCarDataUpdate;
+  Protocol.OnSessionData := OnSessionDataUpdate;
+  Protocol.OnTrackData := OnTrackData;
+  Protocol.OnBroadcastingEvent := OnBroadcastingEvent;
   Memo_Log.Lines.Clear;
   Panel_connection.Enabled := true;
   Btn_DefConnFieldClick(nil);
@@ -368,7 +361,7 @@ end;
 
 procedure TForm_main.FormDestroy(Sender: TObject);
 begin
-  UDP.Free;
+  Protocol.Free;
 end;
 
 end.

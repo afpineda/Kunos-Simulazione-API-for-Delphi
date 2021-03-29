@@ -2,6 +2,30 @@ unit ksBroadcasting.Data;
 
 interface
 
+{ *******************************************************
+
+  Implementation of Kunos Simulazione's broadcasting
+  client API for Delphi
+
+  *******************************************************
+
+  This Delphi/pascal translation:
+  (C) 2021. Ángel Fernández Pineda. Madrid. Spain.
+
+  This work is licensed under the Creative Commons
+  Attribution-ShareAlike 3.0 Unported License. To
+  view a copy of this license,
+  visit http://creativecommons.org/licenses/by-sa/3.0/
+  or send a letter to Creative Commons,
+  444 Castro Street, Suite 900,
+  Mountain View, California, 94041, USA.
+
+  *******************************************************
+
+  [2021-03-28] First implementation
+
+  ******************************************************* }
+
 uses
   System.Types,
   System.Generics.Collections,
@@ -51,6 +75,15 @@ type
     Madagascar = 84);
 
 type
+  TKsRegistrationResult = record
+    ConnectionID: integer;
+    Success: boolean;
+    ReadOnly: boolean;
+    ErrorMessage: string;
+    procedure readFromStream(const strm: TStream);
+  end;
+
+type
   TKsDriverInfo = class
   private
     FFirstName: string;
@@ -64,12 +97,14 @@ type
     property ShortName: string read FShortName;
     property Category: TksDriverCategory read FCategory;
     property Nationality: TksNationalityEnum read FNationality;
+    constructor Create(source: TKsDriverInfo = nil);
+    procedure readFromStream(const strm: TStream);
   end;
 
 type
   TksCarInfo = class
   private
-    FCarIndex: SmallInt;
+    FCarIndex: UInt16;
     FCarModelType: BYTE;
     FTeamName: string;
     FRaceNumber: integer;
@@ -78,17 +113,12 @@ type
     FDrivers: TObjectList<TKsDriverInfo>;
     FNationality: TksNationalityEnum;
   public
-    class function findCarInfo(entryList: TObjectList<TksCarInfo>;
-      const carIndex: SmallInt): TksCarInfo;
-    class function findRaceNumber(entryList: TObjectList<TksCarInfo>;
-      const raceNumber: integer): TksCarInfo;
-    class procedure Copy(fromList, toList: TObjectList<TksCarInfo>);
-    constructor Create(AcarIndex: SmallInt); overload;
+    constructor Create; overload;
     constructor Create(source: TksCarInfo); overload;
     destructor Destroy; override;
     procedure readFromStream(const strm: TStream);
     property Drivers: TObjectList<TKsDriverInfo> read FDrivers;
-    property carIndex: SmallInt read FCarIndex;
+    property carIndex: UInt16 read FCarIndex;
     property CarModelType: BYTE read FCarModelType;
     property TeamName: string read FTeamName;
     property raceNumber: integer read FRaceNumber;
@@ -98,21 +128,31 @@ type
   end;
 
 type
+  TksEntryList = class(TObjectList<TksCarInfo>)
+  public
+    constructor Create;
+    function Duplicate: TksEntryList;
+    function findIndex(const carIndex: UInt16): TksCarInfo;
+    function findRaceNumber(const raceNumber: integer): TksCarInfo;
+    procedure Sort;
+  end;
+
+type
   TksLapInfo = record
-    laptimeMS: Int32;
-    splitsMS: array of Int32;
+    LaptimeMS: Int32;
+    SplitsMS: array of Int32;
     carIndex: UInt16;
-    driverIndex: UInt16;
-    isInvalid: boolean;
-    isValidForBest: boolean;
-    lapType: TksLapType;
+    DriverIndex: UInt16;
+    IsInvalid: boolean;
+    IsValidForBest: boolean;
+    LapType: TksLapType;
     procedure readFromStream(const strm: TStream);
   end;
 
 type
   TksCarData = record
     carIndex: UInt16;
-    driverIndex: UInt16;
+    DriverIndex: UInt16;
     Gear: BYTE;
     WorldPosX: Single;
     WorldPosY: Single;
@@ -195,6 +235,7 @@ procedure WriteString(const strm: TStream; const str: string);
 implementation
 
 uses
+  System.Generics.Defaults,
   System.SysUtils;
 
 // ----------------------------------------------------------------------------
@@ -224,13 +265,29 @@ begin
 end;
 
 // ----------------------------------------------------------------------------
+// TKsRegistrationResult
+// ----------------------------------------------------------------------------
+
+procedure TKsRegistrationResult.readFromStream(const strm: TStream);
+var
+  aux: BYTE;
+begin
+  strm.ReadBuffer(ConnectionID, sizeof(ConnectionID));
+  strm.ReadBuffer(aux, sizeof(aux));
+  Success := (aux <> 0);
+  strm.ReadBuffer(aux, sizeof(aux));
+  ReadOnly := (aux = 0);
+  ErrorMessage := ReadString(strm);
+end;
+
+// ----------------------------------------------------------------------------
 // TksCarData
 // ----------------------------------------------------------------------------
 
 procedure TksCarData.readFromStream(const strm: TStream);
 begin
   strm.ReadBuffer(carIndex, sizeof(carIndex));
-  strm.ReadBuffer(driverIndex, sizeof(driverIndex));
+  strm.ReadBuffer(DriverIndex, sizeof(DriverIndex));
   strm.ReadBuffer(DriverCount, sizeof(DriverCount));
   strm.ReadBuffer(Gear, sizeof(Gear));
   Gear := Gear - 2;
@@ -259,79 +316,64 @@ var
   aux, splitCount: BYTE;
   i: integer;
 begin
-  strm.ReadBuffer(laptimeMS, sizeof(laptimeMS));
+  strm.ReadBuffer(LaptimeMS, sizeof(LaptimeMS));
   strm.ReadBuffer(carIndex, sizeof(carIndex));
-  strm.ReadBuffer(driverIndex, sizeof(driverIndex));
+  strm.ReadBuffer(DriverIndex, sizeof(DriverIndex));
   strm.ReadBuffer(splitCount, sizeof(splitCount));
   if (splitCount < 3) then
-    SetLength(splitsMS, 3)
+    SetLength(SplitsMS, 3)
   else
-    SetLength(splitsMS, splitCount);
+    SetLength(SplitsMS, splitCount);
   for i := 0 to splitCount - 1 do
-    strm.ReadBuffer(splitsMS[i], sizeof(splitsMS[i]));
+    strm.ReadBuffer(SplitsMS[i], sizeof(SplitsMS[i]));
   for i := splitCount to 2 do
-    splitsMS[i] := High(splitsMS[i]);
+    SplitsMS[i] := High(SplitsMS[i]);
   strm.ReadBuffer(aux, sizeof(aux));
-  isInvalid := aux <> 0;
+  IsInvalid := aux <> 0;
   strm.ReadBuffer(aux, sizeof(aux));
-  isValidForBest := aux <> 0;
+  IsValidForBest := aux <> 0;
   strm.ReadBuffer(aux, sizeof(aux));
   strm.ReadBuffer(splitCount, sizeof(splitCount));
   if (aux <> 0) then
-    lapType := TksLapType.Outlap
+    LapType := TksLapType.Outlap
   else if (splitCount <> 0) then
-    lapType := TksLapType.Inlap
+    LapType := TksLapType.Inlap
   else
-    lapType := TksLapType.Regular;
+    LapType := TksLapType.Regular;
 end;
 
 // ----------------------------------------------------------------------------
 // TksCarInfo
 // ----------------------------------------------------------------------------
 
-class function TksCarInfo.findCarInfo(entryList: TObjectList<TksCarInfo>;
-  const carIndex: SmallInt): TksCarInfo;
-var
-  i: integer;
+constructor TKsDriverInfo.Create(source: TKsDriverInfo);
 begin
-  Result := nil;
-  i := 0;
-  while (Result = nil) and (i < entryList.Count) do
-    if (entryList.Items[i].carIndex = carIndex) then
-      Result := entryList.Items[i]
-    else
-      inc(i);
-end;
-
-class function TksCarInfo.findRaceNumber(entryList: TObjectList<TksCarInfo>;
-  const raceNumber: integer): TksCarInfo;
-var
-  i: integer;
-begin
-  Result := nil;
-  i := 0;
-  while (Result = nil) and (i < entryList.Count) do
-    if (entryList.Items[i].raceNumber = raceNumber) then
-      Result := entryList.Items[i]
-    else
-      inc(i);
-end;
-
-class procedure TksCarInfo.Copy(fromList, toList: TObjectList<TksCarInfo>);
-var
-  i: integer;
-begin
-  toList.Clear;
-  if (fromList <> nil) then
+  if (source <> nil) then
   begin
-    for i := 0 to fromList.Count - 1 do
-      toList.Add(fromList.Items[i]);
+    FFirstName := source.FFirstName;
+    FLastName := source.FLastName;
+    FShortName := source.FShortName;
+    FCategory := source.FCategory;
+    FNationality := source.FNationality;
   end;
 end;
 
-constructor TksCarInfo.Create(AcarIndex: SmallInt);
+procedure TKsDriverInfo.readFromStream(const strm: TStream);
 begin
-  FCarIndex := AcarIndex;
+  FFirstName := ReadString(strm);
+  FLastName := ReadString(strm);
+  FShortName := ReadString(strm);
+  strm.ReadBuffer(FCategory, sizeof(FCategory));
+  strm.ReadBuffer(FNationality, sizeof(FNationality));
+end;
+
+// ----------------------------------------------------------------------------
+// TksCarInfo
+// ----------------------------------------------------------------------------
+
+constructor TksCarInfo.Create;
+begin
+  FCarIndex := HIGH(FCarIndex);
   FDrivers := TObjectList<TKsDriverInfo>.Create;
   FDrivers.OwnsObjects := true;
   FCarModelType := 0;
@@ -356,7 +398,7 @@ begin
   FCurrentDriverIndex := source.FCurrentDriverIndex;
   FNationality := source.FNationality;
   for i := 0 to source.FDrivers.Count - 1 do
-    FDrivers.Add(source.FDrivers[i]);
+    FDrivers.Add(TKsDriverInfo.Create(source.FDrivers[i]));
 end;
 
 destructor TksCarInfo.Destroy;
@@ -371,6 +413,7 @@ var
   driverInfo: TKsDriverInfo;
   i: BYTE;
 begin
+  strm.ReadBuffer(FCarIndex, sizeof(FCarIndex));
   strm.ReadBuffer(FCarModelType, sizeof(FCarModelType));
   FTeamName := ReadString(strm);
   strm.ReadBuffer(FRaceNumber, sizeof(FRaceNumber));
@@ -378,17 +421,72 @@ begin
   strm.ReadBuffer(FCurrentDriverIndex, sizeof(FCurrentDriverIndex));
   strm.ReadBuffer(FNationality, sizeof(FNationality));
   strm.ReadBuffer(DriverCount, sizeof(DriverCount));
-  for i := 0 to DriverCount - 1 do
+  if (DriverCount > 0) then
+    for i := 0 to DriverCount - 1 do
+    begin
+      driverInfo := TKsDriverInfo.Create;
+      driverInfo.readFromStream(strm);
+      FDrivers.Add(driverInfo);
+    end;
+end;
+
+// ----------------------------------------------------------------------------
+// TksEntryList
+// ----------------------------------------------------------------------------
+
+constructor TksEntryList.Create;
+begin
+  inherited Create(true);
+end;
+
+function TksEntryList.Duplicate;
+var
+  i: integer;
+begin
+  Result := TksEntryList.Create;
+  for i := 0 to Count - 1 do
+    Result.Add(TksCarInfo.Create(Items[i]));
+end;
+
+procedure TksEntryList.Sort;
+var
+  Comparison: TComparison<TksCarInfo>;
+begin
+  Comparison := function(const Left, Right: TksCarInfo): integer
+    begin
+      Result := Right.FCarIndex - Left.FCarIndex;
+    end;
+  inherited Sort(TComparer<TksCarInfo>.Construct(Comparison));
+end;
+
+function TksEntryList.findIndex(const carIndex: UInt16): TksCarInfo;
+var
+  i: integer;
+begin
+  Result := nil;
+  i := 0;
+  while (Result = nil) and (i < Count) and (Items[i].carIndex <= carIndex) do
   begin
-    driverInfo := TKsDriverInfo.Create;
-    driverInfo.FFirstName := ReadString(strm);
-    driverInfo.FLastName := ReadString(strm);
-    driverInfo.FShortName := ReadString(strm);
-    strm.ReadBuffer(driverInfo.FCategory, sizeof(driverInfo.FCategory));
-    strm.ReadBuffer(driverInfo.FNationality, sizeof(driverInfo.FNationality));
-    FDrivers.Add(driverInfo);
+    if (Items[i].carIndex = carIndex) then
+      Result := Items[i];
+    inc(i);
   end;
 end;
+
+function TksEntryList.findRaceNumber(const raceNumber: integer): TksCarInfo;
+var
+  i: integer;
+begin
+  Result := nil;
+  i := 0;
+  while (Result = nil) and (i < Count) do
+  begin
+    if (Items[i].RaceNumber = raceNumber) then
+      Result := Items[i];
+    inc(i);
+  end;
+end;
+
 
 // ----------------------------------------------------------------------------
 // TksSessionData
@@ -447,6 +545,7 @@ begin
   for camSet in CameraSets.Keys do
     CameraSets.Items[camSet].Free;
   FCameraSets.Free;
+  FHUDPages.Free;
   inherited;
 end;
 
@@ -487,10 +586,10 @@ end;
 
 procedure TksBroadcastingEvent.readFromStream(const strm: TStream);
 begin
-  strm.ReadBuffer(eventType,sizeof(EventType));
+  strm.ReadBuffer(eventType, sizeof(eventType));
   messageText := ReadString(strm);
-  strm.ReadBuffer(TimeMS,sizeof(TimeMS));
-  strm.ReadBuffer(CarID,sizeof(CarID));
+  strm.ReadBuffer(TimeMS, sizeof(TimeMS));
+  strm.ReadBuffer(CarID, sizeof(CarID));
 end;
 
 end.

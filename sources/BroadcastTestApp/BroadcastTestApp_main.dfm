@@ -28,7 +28,10 @@ object Form_main: TForm_main
     ExplicitLeft = 4
     object Page_Connect: TTabSheet
       Caption = 'Connection'
+      ExplicitLeft = 0
+      ExplicitTop = 0
       ExplicitWidth = 649
+      ExplicitHeight = 0
       object Panel_connection: TPanel
         Left = 0
         Top = 0
@@ -106,7 +109,6 @@ object Form_main: TForm_main
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1
-        ExplicitWidth = 649
       end
       object Panel_ConnectButtons: TPanel
         Left = 0
@@ -156,24 +158,25 @@ object Form_main: TForm_main
     object Page_carEntries: TTabSheet
       Caption = 'Entries'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
       ExplicitWidth = 649
+      ExplicitHeight = 0
       object Lbl_drivers: TLabel
         Left = 0
         Top = 167
-        Width = 306
+        Width = 34
         Height = 13
         Align = alTop
         Caption = 'Drivers'
-        ExplicitWidth = 34
       end
       object Lbl_cars: TLabel
         Left = 0
         Top = 0
-        Width = 306
+        Width = 22
         Height = 13
         Align = alTop
         Caption = 'Cars'
-        ExplicitWidth = 22
       end
       object Splitter1: TSplitter
         Left = 0
@@ -210,7 +213,10 @@ object Form_main: TForm_main
     object Page_CarData: TTabSheet
       Caption = 'Car'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
       ExplicitWidth = 649
+      ExplicitHeight = 0
       object List_CarData: TListView
         Left = 0
         Top = 0
@@ -259,7 +265,10 @@ object Form_main: TForm_main
     object Page_SessionData: TTabSheet
       Caption = 'Session'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
       ExplicitWidth = 649
+      ExplicitHeight = 0
       object VE_Session: TValueListEditor
         Left = 0
         Top = 0
@@ -277,6 +286,9 @@ object Form_main: TForm_main
       Caption = 'Track'
       ImageIndex = 4
       ExplicitLeft = 8
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Lbl_Hud: TLabel
         Left = 0
         Top = 74
@@ -284,8 +296,6 @@ object Form_main: TForm_main
         Height = 13
         Align = alTop
         Caption = 'HUD Pages'
-        ExplicitLeft = 20
-        ExplicitTop = 48
         ExplicitWidth = 53
       end
       object Lbl_Cams: TLabel
@@ -295,8 +305,6 @@ object Form_main: TForm_main
         Height = 13
         Align = alTop
         Caption = 'Cameras'
-        ExplicitLeft = 76
-        ExplicitTop = 228
         ExplicitWidth = 42
       end
       object Splitter2: TSplitter

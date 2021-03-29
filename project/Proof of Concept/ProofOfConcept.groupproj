@@ -1,0 +1,36 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{335199B4-6FA0-4CFB-9064-88B39A8BBB38}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="PoCUDPImpl1.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="PoCUDPImpl1">
+        <MSBuild Projects="PoCUDPImpl1.dproj"/>
+    </Target>
+    <Target Name="PoCUDPImpl1:Clean">
+        <MSBuild Projects="PoCUDPImpl1.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PoCUDPImpl1:Make">
+        <MSBuild Projects="PoCUDPImpl1.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="PoCUDPImpl1"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="PoCUDPImpl1:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="PoCUDPImpl1:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
