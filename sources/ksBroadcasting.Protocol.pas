@@ -234,7 +234,8 @@ begin
         end)
     else
       FOnTrackData(self, trackData);
-  end else
+  end
+  else
     trackData.Free;
 end;
 
@@ -255,19 +256,21 @@ procedure TksBroadcastingProtocol.Msg(const carData: TKsCarData);
 var
   carInfo: TKsCarInfo;
 begin
-  carInfo := FEntryList.findIndex(carData.carIndex);
-  if (expectedEntryCount = 0) and (carInfo = nil) or
-    (carInfo.Drivers.Count <> carData.DriverCount) then
-    RequestEntryList
-  else if Assigned(FOnCarData) then
-    if FDoSync then
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          FOnCarData(self, carData);
-        end)
-    else
-      FOnCarData(self, carData);
+  if (expectedEntryCount = 0) then
+  begin
+    carInfo := FEntryList.findIndex(carData.carIndex);
+    if ((carInfo = nil) or (carInfo.Drivers.Count <> carData.DriverCount)) then
+      RequestEntryList
+    else if (Assigned(FOnCarData)) then
+      if FDoSync then
+        TThread.Synchronize(nil,
+          procedure
+          begin
+            FOnCarData(self, carData);
+          end)
+      else
+        FOnCarData(self, carData);
+  end;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const event: TksBroadcastingEvent);
@@ -292,7 +295,7 @@ begin
   begin
     carInfo := FEntryList.findRaceNumber(carRaceNumber);
     if (carInfo <> nil) then
-      RequestFocus(UInt16(carInfo.carIndex), cameraSet, camera);
+      RequestFocus(carInfo.carIndex, cameraSet, camera);
   end;
 end;
 

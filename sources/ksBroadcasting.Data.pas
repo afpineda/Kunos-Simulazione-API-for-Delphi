@@ -24,6 +24,8 @@ interface
 
   [2021-03-28] First implementation
 
+  [2021-03-30] Fixed bug on TksEntryList.Sort
+
   ******************************************************* }
 
 uses
@@ -193,8 +195,9 @@ type
     Clouds: Single;
     Wetness: Single;
     BestSessionLap: TksLapInfo;
-    BestLapCarIndex: SmallInt;
-    BestLapDriverIndex: SmallInt;
+    // NOTE: Included in kunos api, but not used anywhere
+//    BestLapCarIndex: SmallInt;
+//    BestLapDriverIndex: SmallInt;
     FocusedCarIndex: Int32;
     ActiveCameraSet: string;
     ActiveCamera: string;
@@ -234,7 +237,7 @@ type
     eventType: TksBroadcastingEventType;
     messageText: string;
     TimeMS: integer;
-    CarID: integer;
+    CarIndex: integer;
     procedure readFromStream(const strm: TStream);
   end;
 
@@ -463,7 +466,7 @@ var
 begin
   Comparison := function(const Left, Right: TksCarInfo): integer
     begin
-      Result := Right.FCarIndex - Left.FCarIndex;
+      Result := Left.FCarIndex - Right.FCarIndex;
     end;
   inherited Sort(TComparer<TksCarInfo>.Construct(Comparison));
 end;
@@ -598,7 +601,7 @@ begin
   strm.ReadBuffer(eventType, sizeof(eventType));
   messageText := ReadString(strm);
   strm.ReadBuffer(TimeMS, sizeof(TimeMS));
-  strm.ReadBuffer(CarID, sizeof(CarID));
+  strm.ReadBuffer(CarIndex, sizeof(CarIndex));
 end;
 
 end.

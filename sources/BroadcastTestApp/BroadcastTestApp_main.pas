@@ -93,7 +93,7 @@ type
     procedure OnEntryList(Sender: TksBroadcastingProtocol;
       NewList: TksEntryList);
     procedure OnCarDataUpdate(Sender: TksBroadcastingProtocol;
-      const carInfo: TKsCarData);
+      const carData: TKsCarData);
     procedure OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
       const sessionData: TKsSessionData);
     procedure OnTrackData(Sender: TksBroadcastingProtocol;
@@ -185,7 +185,7 @@ begin
 end;
 
 procedure TForm_main.OnCarDataUpdate(Sender: TksBroadcastingProtocol;
-  const carInfo: TKsCarData);
+  const carData: TKsCarData);
 var
   item: TListItem;
 begin
@@ -193,14 +193,18 @@ begin
   if List_CarData.Items.Count > 250 then
     List_CarData.Items.Clear;
   item := List_CarData.Items.Insert(0);
-  item.Caption := carInfo.carIndex.ToString;
-  item.SubItems.Add(carInfo.driverIndex.ToString);
-  item.SubItems.Add(carInfo.DriverCount.ToString);
-  item.SubItems.Add(carInfo.Position.ToString);
-  item.SubItems.Add(carInfo.TrackPosition.ToString);
-  item.SubItems.Add(Format('%2.1f%%', [carInfo.SplinePosition * 100]));
-  item.SubItems.Add(carInfo.Laps.ToString);
-  item.SubItems.Add(carInfo.LastLap.laptimeMS.ToString);
+  with carData do
+  begin
+    item.Caption := carData.carIndex.ToString;
+    item.SubItems.Add(driverIndex.ToString);
+    item.SubItems.Add(Format('%.2f / %.2f / %.2f',
+      [WorldPosX, WorldPosY, Yaw]));
+    item.SubItems.Add(Position.ToString);
+    item.SubItems.Add(TrackPosition.ToString);
+    item.SubItems.Add(Format('%2.1f%%', [SplinePosition * 100]));
+    item.SubItems.Add(Laps.ToString);
+    item.SubItems.Add(LastLap.laptimeMS.ToString);
+  end;
 end;
 
 procedure TForm_main.OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
@@ -216,7 +220,7 @@ begin
     Add('Clouds=' + sessionData.Clouds.ToString);
     Add('Wetness=' + sessionData.Wetness.ToString);
     Add('Best Lap=' + sessionData.BestSessionLap.laptimeMS.ToString);
-    Add('Best car index=' + sessionData.BestLapCarIndex.ToString);
+    Add('Best car index=' + sessionData.BestSessionLap.carIndex.ToString);
     Add('Focused car index=' + sessionData.FocusedCarIndex.ToString);
     Add('Camera set=' + sessionData.ActiveCameraSet);
     Add('Camera =' + sessionData.ActiveCamera);
@@ -267,7 +271,9 @@ end;
 procedure TForm_main.OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
   const event: TksBroadcastingEvent);
 begin
-  Memo_Log.Lines.Add('BROADCASTING EVENT: ' + event.messageText);
+  Memo_Log.Lines.Add(Format('EVENT: %s /CARIDX: %d /MS: %d / TYPE: %d',
+    [event.messageText, event.carIndex, event.TimeMS,
+    Integer(event.eventType)]));
 end;
 
 // ----------------------------------------------------------------------------
