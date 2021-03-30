@@ -22,6 +22,9 @@ unit BroadcastTestApp_main;
 
   [2021-03-10] First implementation
 
+  [2021-03-30] Minor improvements.
+  No broadcasting activity detection.
+
   ******************************************************* }
 
 interface
@@ -33,7 +36,8 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.Grids, Vcl.ValEdit,
   ksBroadcasting.Protocol,
-  ksBroadcasting.UDP, ksBroadcasting.Data;
+  ksBroadcasting.UDP,
+  ksBroadcasting.Data, Vcl.WinXCtrls;
 
 type
   TForm_main = class(TForm)
@@ -68,6 +72,8 @@ type
     LV_Cam: TListView;
     Splitter2: TSplitter;
     Btn_ForceTrackData: TButton;
+    AI_Receiving: TActivityIndicator;
+    Timer_activityCheck: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure Btn_DefConnFieldClick(Sender: TObject);
     procedure Btn_ClearLogClick(Sender: TObject);
@@ -77,10 +83,11 @@ type
     procedure LV_HUDDblClick(Sender: TObject);
     procedure LV_CamDblClick(Sender: TObject);
     procedure Btn_ForceTrackDataClick(Sender: TObject);
+    procedure Grid_carEntriesDblClick(Sender: TObject);
+    procedure Timer_activityCheckTimer(Sender: TObject);
   private
     { Private declarations }
-    UDP: TksUDPDelegate;
-    Protocol: TksBroadcastingProtocol;
+    Protocol: TksUDPv4BroadcastingProtocol;
     procedure OnConnection(Sender: TksBroadcastingProtocol;
       const result: TKsRegistrationResult);
     procedure OnEntryList(Sender: TksBroadcastingProtocol;
@@ -104,6 +111,7 @@ implementation
 
 uses
   Winapi.Winsock2,
+  System.DateUtils,
   System.Net.Socket;
 
 {$R *.dfm}
@@ -115,6 +123,7 @@ procedure TForm_main.OnConnection(Sender: TksBroadcastingProtocol;
   const result: TKsRegistrationResult);
 begin
   Memo_Log.Lines.Add('Registration result: ' + result.ErrorMessage);
+  List_CarData.Items.Clear;
   with result do
     if (success and ReadOnly) then
       Memo_Log.Lines.Add('Connected as read-only')
@@ -124,7 +133,8 @@ begin
     begin
       Memo_Log.Lines.Add('Rejected');
     end;
-  List_CarData.Items.Clear;
+  AI_Receiving.Animate := result.success;
+  Timer_activityCheck.Enabled := result.success;
 end;
 
 procedure TForm_main.OnEntryList(Sender: TksBroadcastingProtocol;
@@ -132,8 +142,6 @@ procedure TForm_main.OnEntryList(Sender: TksBroadcastingProtocol;
 var
   i, j, rc: Integer;
 begin
-  // for i := 0 to Grid_carEntries.ColCount - 1 do
-  // Grid_carEntries.Cols[i].Clear;
   Grid_carEntries.RowCount := 1;
   Grid_carEntries.ColCount := 3;
   Grid_carEntries.Cells[0, 0] := 'Car#';
@@ -181,10 +189,10 @@ procedure TForm_main.OnCarDataUpdate(Sender: TksBroadcastingProtocol;
 var
   item: TListItem;
 begin
-  Memo_Log.Lines.Add('Car data updated');
+  // Memo_Log.Lines.Add('Car data updated');
   if List_CarData.Items.Count > 250 then
     List_CarData.Items.Clear;
-  item := List_CarData.Items.Add;
+  item := List_CarData.Items.Insert(0);
   item.Caption := carInfo.carIndex.ToString;
   item.SubItems.Add(carInfo.driverIndex.ToString);
   item.SubItems.Add(carInfo.DriverCount.ToString);
@@ -214,6 +222,9 @@ begin
     Add('Camera =' + sessionData.ActiveCamera);
     Add('Air temp=' + sessionData.AmbientTemp.ToString);
     Add('Track temp=' + sessionData.TrackTemp.ToString);
+    Add('Event Index=' + sessionData.EventIndex.ToString);
+    Add('Session Index=' + sessionData.SessionIndex.ToString);
+    Add('Phase=' + Byte(sessionData.Phase).ToString);
   end;
 end;
 
@@ -242,6 +253,17 @@ begin
   trackData.Free;
 end;
 
+procedure TForm_main.Timer_activityCheckTimer(Sender: TObject);
+begin
+  if Protocol.Registered and
+    (MilliSecondsBetween(Now, Protocol.LastMsgTimestamp) >
+    (Protocol.UpdateIntervalMs * 10)) then
+  begin
+    Memo_Log.Lines.Add('No broadcasting activity detected.');
+    Btn_Disconnect.Click;
+  end;
+end;
+
 procedure TForm_main.OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
   const event: TksBroadcastingEvent);
 begin
@@ -258,15 +280,18 @@ begin
 end;
 
 procedure TForm_main.Btn_connectClick(Sender: TObject);
+var
+  ep: TNetEndPoint;
 begin
   try
-    UDP.RemoteEndPoint.Family := 2;
-    UDP.RemoteEndPoint.SetAddress(Edt_Host.Text);
-    UDP.RemoteEndPoint.Port := StrToInt(Edt_Port.Text);
-    Protocol.Register('Delphi demo', Edt_ConnPwd.Text, 5000,
+    ep.Family := 2;
+    ep.SetAddress(Edt_Host.Text);
+    ep.Port := StrToInt(Edt_Port.Text);
+    Protocol.Register(ep, 'Delphi demo', Edt_ConnPwd.Text, 500,
       Edt_CommandPwd.Text);
     Memo_Log.Lines.Add('Registration request sent to ' + Edt_Host.Text + ':' +
       Edt_Port.Text);
+    Timer_activityCheck.Interval := Protocol.UpdateIntervalMs * 7;
   except
     on E: Exception do
     begin
@@ -289,6 +314,8 @@ begin
   try
     Protocol.Unregister;
     Memo_Log.Lines.Add('Unregistration requested');
+    Timer_activityCheck.Enabled := false;
+    AI_Receiving.Animate := false;
   except
     on E: Exception do
     begin
@@ -309,7 +336,7 @@ begin
   begin
     Memo_Log.Lines.Add('Requesting Camera: ' + LV_Cam.Selected.Caption + '/' +
       LV_Cam.Selected.SubItems[0]);
-    // Protocol.RequestFocus(LV_Cam.Selected.Caption, LV_Cam.Selected.SubItems[0]);
+    Protocol.RequestFocus(LV_Cam.Selected.Caption, LV_Cam.Selected.SubItems[0]);
   end;
 end;
 
@@ -334,8 +361,7 @@ end;
 
 procedure TForm_main.FormCreate(Sender: TObject);
 begin
-  UDP := TksUDPDelegate.Create;
-  Protocol := TksBroadcastingProtocol.Create(UDP);
+  Protocol := TksUDPv4BroadcastingProtocol.Create;
   Protocol.OnRegistration := OnConnection;
   Protocol.OnEntryList := OnEntryList;
   Protocol.OnCarData := OnCarDataUpdate;
@@ -357,11 +383,28 @@ begin
   VE_Track.Strings.Clear;
   LV_HUD.Clear;
   LV_Cam.Clear;
+  Grid_carEntries.RowCount := 0;
+  Grid_drivers.RowCount := 0;
+  AI_Receiving.Animate := false;
 end;
 
 procedure TForm_main.FormDestroy(Sender: TObject);
 begin
   Protocol.Free;
+end;
+
+procedure TForm_main.Grid_carEntriesDblClick(Sender: TObject);
+var
+  carNumber: Integer;
+begin
+  with Grid_carEntries do
+    if (Row >= 0) and (Row < RowCount) then
+      try
+        Memo_Log.Lines.Add('Requesting camera focus on car # ' + Cells[0, Row]);
+        carNumber := StrToInt(Cells[0, Row]);
+        Protocol.RequestFocusOnRaceNumber(carNumber);
+      except
+      end;
 end;
 
 end.

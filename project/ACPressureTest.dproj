@@ -133,11 +133,11 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Icon_MainIcon>..\resources\ACPressureTest.ico</Icon_MainIcon>
-        <VerInfo_Keys>CompanyName=Ángel Fernández Pineda;FileDescription=$(MSBuildProjectName);FileVersion=1.1.1.6;InternalName=;LegalCopyright=This software is in the public domain;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Ángel Fernández Pineda;FileDescription=$(MSBuildProjectName);FileVersion=1.1.1.7;InternalName=;LegalCopyright=This software is in the public domain;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_MinorVer>1</VerInfo_MinorVer>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_Release>1</VerInfo_Release>
-        <VerInfo_Build>6</VerInfo_Build>
+        <VerInfo_Build>7</VerInfo_Build>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

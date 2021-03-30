@@ -90,6 +90,8 @@ type
   private
     FConnectionID: Int32;
     FMessageDelegate: IksMessageDelegate;
+    FMsgTimestamp: TDateTime;
+    FUpdateInterval: integer;
     lastEntrylistRequest: TDateTime;
     function GetRegistered: boolean;
   protected
@@ -122,6 +124,8 @@ type
     procedure RequestHUDPage(const HUDPage: string);
     procedure RequestTrackData;
     property Registered: boolean read GetRegistered;
+    property LastMsgTimestamp: TDateTime read FMsgTimestamp;
+    property UpdateIntervalMs: integer read FUpdateInterval;
   end;
 
 implementation
@@ -155,6 +159,8 @@ begin
     FConnectionID := -1;
     lastEntrylistRequest := Now;
     FMessageDelegate := msgDelegate;
+    FMsgTimestamp := Now;
+    FUpdateInterval := 0;
   end
   else
     raise Exception.Create('TksBroadcastingProtocol: message delegate is null');
@@ -242,6 +248,7 @@ var
   msgType: TksInboundMT;
 begin
   inStrm := MessageDelegate.ReceiveFrom;
+  FMsgTimestamp := Now;
   try
     if (inStrm <> nil) and (inStrm.Size > 0) then
     begin
@@ -297,6 +304,7 @@ begin
       outStrm.WriteBuffer(msUpdateInterval, sizeof(msUpdateInterval));
       WriteString(outStrm, commandPassword);
       MessageDelegate.SendTo(outStrm);
+      FUpdateInterval := msUpdateInterval;
     finally
       outStrm.Free;
     end;

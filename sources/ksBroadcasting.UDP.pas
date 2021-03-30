@@ -54,8 +54,7 @@ type
   private
     FSocket: Winapi.Winsock2.TSocket;
     FRemoteEndPoint: TNetEndPoint;
-    class function CheckSocketResult(ResultCode: integer;
-      const Op: string): integer;
+    class procedure CheckSocketResult(ResultCode: integer; const Op: string);
   public
     constructor Create;
     destructor Destroy; override;
@@ -75,14 +74,13 @@ type
     }
   private
     FDelegate: TksUDPDelegate;
-    // function GetRemoteEndPoint: TNetEndPoint;
-    // procedure SetRemoteEndPoint: TNetEndPoint;
+    function GetRemoteEndPoint: TNetEndPoint;
   public
     constructor Create(const synchronizedEvents: boolean = true);
-    destructor Destroy; override;
     procedure Register(const RemoteEndPoint: TNetEndPoint;
       const displayName: string; const connectionPassword: string;
       const msUpdateInterval: Int32 = 1000; const commandPassword: string = '');
+    property RemoteEndPoint: TNetEndPoint read GetRemoteEndPoint;
   end;
 
 type
@@ -97,18 +95,12 @@ implementation
 uses
   System.Netconsts;
 
-class function TksUDPDelegate.CheckSocketResult(ResultCode: integer;
-  const Op: string): integer;
+class procedure TksUDPDelegate.CheckSocketResult(ResultCode: integer;
+  const Op: string);
 begin
   if ResultCode < 0 then
-  begin
-    Result := WSAGetLastError;
-    if Result <> WSAEWOULDBLOCK then
-      raise ESocketError.CreateResFmt(@sSocketError,
-        [SysErrorMessage(Result), Result, Op]);
-  end
-  else
-    Result := 0;
+    raise ESocketError.CreateResFmt(@sSocketError,
+      [SysErrorMessage(WSAGetLastError), WSAGetLastError, Op]);
 end;
 
 constructor TksUDPDelegate.Create;
@@ -204,14 +196,14 @@ end;
 constructor TksUDPv4BroadcastingProtocol.Create(const synchronizedEvents
   : boolean);
 begin
+  // Note: interfaced object. No need to call FDelegate.Free.
   FDelegate := TksUDPDelegate.Create;
   inherited Create(FDelegate, synchronizedEvents);
 end;
 
-destructor TksUDPv4BroadcastingProtocol.Destroy;
+function TksUDPv4BroadcastingProtocol.GetRemoteEndPoint: TNetEndPoint;
 begin
-  inherited;
-  FDelegate.Free;
+  Result := FDelegate.RemoteEndPoint;
 end;
 
 procedure TksUDPv4BroadcastingProtocol.Register(const RemoteEndPoint

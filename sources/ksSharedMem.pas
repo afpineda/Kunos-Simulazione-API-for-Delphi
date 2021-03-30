@@ -69,7 +69,7 @@ type
       anymore. No memory access exceptions will be raisen and you will read the
       same data again and again. This is Windows' behavior and can not be changed.
       - You may detect such a situation when "packetId" remains the same in
-      a certain time.
+      a certain time lapse.
       - In ACC, all fields of physics data are set to zero when "status" is
       different to AC_LIVE. Also if the game is not running anymore.
     }

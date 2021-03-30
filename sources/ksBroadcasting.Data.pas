@@ -31,6 +31,15 @@ uses
   System.Generics.Collections,
   System.classes;
 
+{ SUMMARY:
+
+  Data structures needed to handle KS' broadcasting protocol
+
+  NOTES:
+  - CarIndex is not an index: do not assume sequential numbering, nor
+  zero-based
+}
+
 {$SCOPEDENUMS ON}
 {$Z4}
 
@@ -481,7 +490,7 @@ begin
   i := 0;
   while (Result = nil) and (i < Count) do
   begin
-    if (Items[i].RaceNumber = raceNumber) then
+    if (Items[i].raceNumber = raceNumber) then
       Result := Items[i];
     inc(i);
   end;

@@ -7,6 +7,7 @@ object Form_main: TForm_main
   Color = clBtnFace
   Constraints.MinHeight = 410
   Constraints.MinWidth = 330
+  DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -22,16 +23,11 @@ object Form_main: TForm_main
     Top = 0
     Width = 314
     Height = 371
-    ActivePage = Page_TrackData
+    ActivePage = Page_CarData
     Align = alClient
     TabOrder = 0
-    ExplicitLeft = 4
     object Page_Connect: TTabSheet
       Caption = 'Connection'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 649
-      ExplicitHeight = 0
       object Panel_connection: TPanel
         Left = 0
         Top = 0
@@ -42,7 +38,9 @@ object Form_main: TForm_main
         Caption = 'Panel_connection'
         ShowCaption = False
         TabOrder = 0
-        ExplicitWidth = 649
+        DesignSize = (
+          306
+          201)
         object Edt_CommandPwd: TLabeledEdit
           Left = 11
           Top = 168
@@ -97,6 +95,13 @@ object Form_main: TForm_main
           TabOrder = 2
           OnClick = Btn_DefConnFieldClick
         end
+        object AI_Receiving: TActivityIndicator
+          Left = 264
+          Top = 13
+          Anchors = [akTop, akRight]
+          FrameDelay = 100
+          IndicatorType = aitRotatingSector
+        end
       end
       object Memo_Log: TMemo
         Left = 0
@@ -119,7 +124,6 @@ object Form_main: TForm_main
         BevelOuter = bvNone
         ShowCaption = False
         TabOrder = 2
-        ExplicitWidth = 649
         DesignSize = (
           306
           41)
@@ -151,32 +155,29 @@ object Form_main: TForm_main
           Caption = 'Clear Log'
           TabOrder = 2
           OnClick = Btn_ClearLogClick
-          ExplicitLeft = 569
         end
       end
     end
     object Page_carEntries: TTabSheet
       Caption = 'Entries'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 649
-      ExplicitHeight = 0
       object Lbl_drivers: TLabel
         Left = 0
         Top = 167
-        Width = 34
+        Width = 306
         Height = 13
         Align = alTop
         Caption = 'Drivers'
+        ExplicitWidth = 34
       end
       object Lbl_cars: TLabel
         Left = 0
         Top = 0
-        Width = 22
+        Width = 306
         Height = 13
         Align = alTop
         Caption = 'Cars'
+        ExplicitWidth = 22
       end
       object Splitter1: TSplitter
         Left = 0
@@ -193,12 +194,17 @@ object Form_main: TForm_main
         Top = 13
         Width = 306
         Height = 144
+        Hint = 'Double click for camera focus'
         Align = alTop
         ColCount = 4
         FixedCols = 0
         FixedRows = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSizing, goColSizing, goRowSelect]
+        ParentShowHint = False
+        ShowHint = True
         TabOrder = 0
+        OnDblClick = Grid_carEntriesDblClick
+        ExplicitTop = 17
       end
       object Grid_drivers: TStringGrid
         Left = 0
@@ -213,10 +219,6 @@ object Form_main: TForm_main
     object Page_CarData: TTabSheet
       Caption = 'Car'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 649
-      ExplicitHeight = 0
       object List_CarData: TListView
         Left = 0
         Top = 0
@@ -259,16 +261,11 @@ object Form_main: TForm_main
         RowSelect = True
         TabOrder = 0
         ViewStyle = vsReport
-        ExplicitWidth = 649
       end
     end
     object Page_SessionData: TTabSheet
       Caption = 'Session'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 649
-      ExplicitHeight = 0
       object VE_Session: TValueListEditor
         Left = 0
         Top = 0
@@ -285,10 +282,6 @@ object Form_main: TForm_main
     object Page_TrackData: TTabSheet
       Caption = 'Track'
       ImageIndex = 4
-      ExplicitLeft = 8
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Lbl_Hud: TLabel
         Left = 0
         Top = 74
@@ -331,7 +324,6 @@ object Form_main: TForm_main
           'b=2'
           'c=3')
         TabOrder = 0
-        ExplicitTop = 0
         ColWidths = (
           150
           150)
@@ -341,6 +333,7 @@ object Form_main: TForm_main
         Top = 87
         Width = 306
         Height = 103
+        Hint = 'Double click to request HUD page'
         Align = alTop
         Columns = <>
         Items.ItemData = {
@@ -350,16 +343,18 @@ object Form_main: TForm_main
         MultiSelect = True
         ReadOnly = True
         RowSelect = True
+        ParentShowHint = False
+        ShowHint = True
         TabOrder = 1
         ViewStyle = vsList
         OnDblClick = LV_HUDDblClick
-        ExplicitTop = 66
       end
       object LV_Cam: TListView
         Left = 0
         Top = 213
         Width = 306
         Height = 130
+        Hint = 'Double click to request camera focus'
         Align = alClient
         Columns = <
           item
@@ -377,11 +372,11 @@ object Form_main: TForm_main
           00D8D0BF23FFFFFFFF}
         MultiSelect = True
         ReadOnly = True
+        ParentShowHint = False
+        ShowHint = True
         TabOrder = 2
         ViewStyle = vsReport
         OnDblClick = LV_CamDblClick
-        ExplicitTop = 231
-        ExplicitHeight = 118
       end
       object Btn_ForceTrackData: TButton
         Left = 0
@@ -392,8 +387,12 @@ object Form_main: TForm_main
         Caption = 'Force update'
         TabOrder = 3
         OnClick = Btn_ForceTrackDataClick
-        ExplicitTop = -7
       end
     end
+  end
+  object Timer_activityCheck: TTimer
+    OnTimer = Timer_activityCheckTimer
+    Left = 268
+    Top = 4
   end
 end

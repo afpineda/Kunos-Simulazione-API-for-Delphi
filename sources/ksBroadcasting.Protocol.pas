@@ -46,19 +46,21 @@ type
       - Call "Register"
 
       EVENTS:
-      Events are called in the main thread if synchronizedEvents was set to
-      true at instance creation. Otherwise, they are called from a separate
-      thread. Any object passed to an event handler is not automatically
-      destroyed. Take care, but there is an exception:
-      when synchronizedEvents=false, TOnEntryListEvent should NOT destroy
-      "EntryList".
+      Events are called at the main thread if synchronizedEvents was set to
+      true at instance creation. Otherwise, they are called at a separate
+      thread. Any object (not record) passed to an event handler should be
+      destroyed if not used. Take care.
+
+      "OnEntryList" may be called with EntryList=nil. This happens
+      when the entry list has been cleared and is about to change.
 
       MESSAGE HANDLING:
       A separate thread is spawn. It will attend the incoming messages.
 
       OTHER NOTES:
       Not connection-oriented. "Register" does not mean "connect to".
-      Any outcoming message may have no answer, including "Register".
+      Any outgoing message may have no answer, including "Register".
+      Incoming messages may be received out of order.
     }
   public type
     TOnRegistrationEvent = procedure(Sender: TksBroadcastingProtocol;
@@ -97,7 +99,7 @@ type
     constructor Create(msgDelegate: IksMessageDelegate;
       const synchronizedEvents: boolean = true);
     destructor Destroy; override;
-    procedure RequestFocus(const carRaceNumber: integer;
+    procedure RequestFocusOnRaceNumber(const carRaceNumber: integer;
       const cameraSet: string = ''; const camera: string = ''); overload;
 
     property OnBroadcastingEvent: TOnBroadcastingEventEvent
@@ -209,7 +211,7 @@ begin
             FOnEntryList(self, FEntryList.Duplicate);
           end)
       else
-        FOnEntryList(self, FEntryList);
+        FOnEntryList(self, FEntryList.Duplicate);
     end;
   end
   else
@@ -223,6 +225,7 @@ end;
 procedure TksBroadcastingProtocol.Msg(const trackData: TksTrackData);
 begin
   if Assigned(FOnTrackData) then
+  begin
     if FDoSync then
       TThread.Synchronize(nil,
         procedure
@@ -231,6 +234,8 @@ begin
         end)
     else
       FOnTrackData(self, trackData);
+  end else
+    trackData.Free;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const sessionData: TKsSessionData);
@@ -251,7 +256,8 @@ var
   carInfo: TKsCarInfo;
 begin
   carInfo := FEntryList.findIndex(carData.carIndex);
-  if (carInfo = nil) or (carInfo.Drivers.Count <> carData.DriverCount) then
+  if (expectedEntryCount = 0) and (carInfo = nil) or
+    (carInfo.Drivers.Count <> carData.DriverCount) then
     RequestEntryList
   else if Assigned(FOnCarData) then
     if FDoSync then
@@ -277,8 +283,8 @@ begin
       FOnBroadcastingEvent(self, event);
 end;
 
-procedure TksBroadcastingProtocol.RequestFocus(const carRaceNumber: integer;
-const cameraSet: string = ''; const camera: string = '');
+procedure TksBroadcastingProtocol.RequestFocusOnRaceNumber(const carRaceNumber
+  : integer; const cameraSet: string = ''; const camera: string = '');
 var
   carInfo: TKsCarInfo;
 begin
