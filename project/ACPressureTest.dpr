@@ -11,7 +11,9 @@ uses
   ksSharedMem.Data in '..\sources\ksSharedMem.Data.pas',
   ACPressureTest_CopyPasteOptions in '..\sources\ACPressureTest\ACPressureTest_CopyPasteOptions.pas' {Form_CopyPasteOptions},
   ACPressureTest_spanish in '..\sources\ACPressureTest\ACPressureTest_spanish.pas',
-  ACPressureTest_about in '..\sources\ACPressureTest\ACPressureTest_about.pas' {Form_About};
+  ACPressureTest_about in '..\sources\ACPressureTest\ACPressureTest_about.pas' {Form_About},
+  Vcl.Themes,
+  Vcl.Styles;
 
 {$R *.res}
 

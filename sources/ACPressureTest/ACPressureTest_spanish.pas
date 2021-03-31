@@ -88,6 +88,7 @@ begin
   str_trackName := 'Circuito';
   str_weather_options := 'Lluvia/seco';
   str_wet := 'Lluvia';
+  str_sponsor := 'Patrocinado por JJ Endurance Series';
 end;
 
 class function TSpanishTranslator.GetLanguageID: LANGID;
@@ -150,6 +151,7 @@ begin
   inst.Caption := 'Acerca de';
   inst.Lbl_notForSale.Caption :=
     'Este software está en el dominio público. PROHIBIDA SU VENTA.';
+  inst.Link_JJ.Caption := str_sponsor;
 end;
 
 initialization

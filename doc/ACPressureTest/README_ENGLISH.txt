@@ -6,16 +6,16 @@ AUTOMATED PRESSURE TEST FOR AC/ACC
 WHAT IS A PRESSURE TEST?
 ------------------------
 
-A pressure test will compute the correct cold tyre pressure in order to achieve a target hot tyre pressure after a few laps.
-Such computed tyre pressure will remain valid as long as:
-- track/air temperature does not change. However, you may easily predict cold tyre pressure for any temperature. See below.
-- tyre compound remains the same
+A pressure test will compute the correct cold tire pressure in order to achieve a target hot tire pressure after a few laps.
+Such computed tire pressure will remain valid as long as:
+- track/air temperature does not change. However, you may easily predict cold tire pressure for any temperature. See below.
+- tire compound remains the same
 - car setup and track remains the same
 
-You should write down tyre compound, track/air temps, car, track and car setup along with the correct cold pressures.
+You should write down tire compound, track/air temps, car, track and car setup along with the correct cold pressures.
 
 ------------------------------------------------------------------
-HOW DO I PREDICT COLD TYRE PRESSURE FOR ANY AIR/TRACK TEMPERATURE?
+HOW DO I PREDICT COLD tire PRESSURE FOR ANY AIR/TRACK TEMPERATURE?
 ------------------------------------------------------------------
 
 Apply this formula:
@@ -28,7 +28,7 @@ Predicted cold pressure = test result - (0,1 * DT)
 HOW DO I (RE)START THE AUTOMATED PRESSURE TEST?
 ------------------------------------------------
 
-Enter a practice session (hotlap modes are not suitable).
+Enter a practice session (hot lap modes are not suitable).
 Go to the setup screen, then click on "drive" within a time lapse of 5 seconds.
 Otherwise, cold pressures will not be detected.
 
@@ -57,7 +57,7 @@ WHAT IS THIS FOR?
 Run another test from start
 
 "Actions > Set target pressures to default":
-Use predefined target pressures for current tyre compound. Useful after the test is finished.
+Use predefined target pressures for current tire compound. Useful after the test is finished.
 
 "Actions > Copy results to clipboard":
 After the test is finished, copy results in table format, suitable for any spreadsheet app (press CTRL-V to paste).
@@ -79,7 +79,7 @@ The pressure test will finish automatically after a predefined number of laps.
 App window will remain on top of game screen.
 
 "Options > App options > Copy-paste options":
-Select which data fields (and order) to copy-paste. Usefull in order to write down your test result into a spreadsheet.
+Select which data fields (and order) to copy-paste. Useful in order to write down your test result into a spreadsheet.
 
 "Options > App options > Clean my Window's registry key":
 This app will store user options at the Windows' registry. Choose this to clean such options if you plan to stop using it.

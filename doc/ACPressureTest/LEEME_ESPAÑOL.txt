@@ -3,42 +3,42 @@ TEST DE PRESIONES AUTOMATIZADO PARA AC/ACC
 ==========================================
 
 -----------------------------
-�QUE ES UN TEST DE PRESIONES?
+¿QUÉ ES UN TEST DE PRESIONES?
 -----------------------------
 
-Un test de presione calcula la presione del neumatico correcta en frio necesaria para conseguir una presion objetivo en caliente
+Un test de presiones calcula la presión del neumático correcta en frío necesaria para conseguir una presión objetivo en caliente
 tras unas pocas vueltas. El test de presiones seguira siendo valido si:
-- no cambia la temperatura ambiente ni de pista. Sin embargo, puede predecir facilmente la presion en frio para 
-cualquier temperatura. Vease mas abajo.
-- El compuesto del neum�tico no cambia
+- no cambia la temperatura ambiente ni de pista. Sin embargo, se puede predecir facilmente la presión en frío para 
+cualquier temperatura. Véase más abajo.
+- El compuesto del neumático no cambia
 - La pista y los reglajes son los mismos.
 
-Deberia anotar el compuesto del neumatico, las temperaturas, la pista y los reglajes utilizados junto con las presiones correctas en frio.
+Debería anotar el compuesto del neumático, las temperaturas, la pista y los reglajes utilizados junto con las presiones correctas en frío.
 
 ---------------------------------------------------------------
-�COMO SE PREDICE LA PRESION EN FRIO PARA CUALQUIER TEMPERATURA?
+¿CÓMO SE PREDICE LA PRESION EN FRIO PARA CUALQUIER TEMPERATURA?
 ---------------------------------------------------------------
 
-Aplique esta formula:
+Aplique esta fórmula:
 
 Sea DT = MAXIMO (temperatura actual del aire - temperatura del aire durante el test , temperatura actual de pista - temperatura de pista durante el test)
 
-Presion en frio = resultado del test - (0,1 * DT)
+Presion en frío = resultado del test - (0,1 * DT)
 
 --------------------------------------
-�COMO (RE)INICIO UN TEST DE PRESIONES?
+¿CÓMO (RE)INICIO UN TEST DE PRESIONES?
 --------------------------------------
 
-Acuda a una sesi�n de practica (las sesiones de vuelta rapida no son apropiadas).
+Acuda a una sesión de práctica (las sesiones de vuelta rápida no son apropiadas).
 Entre en la pantalla de reglajes y luego haga click en "conducir" antes de que transcurran 5 segundos.
-De otro modo, no se detectaran las presiones en frio.
+De otro modo, no se detectarán las presiones en frío.
 
 -----------------------------------
-�COMO EJECUTO EL TEST DE PRESIONES?
+¿CÓMO EJECUTO EL TEST DE PRESIONES?
 -----------------------------------
 
 Simplemente conduzca durante varias vueltas. Trate de no pisar los pianos.
-Para reglajes de calificacion:
+Para reglajes de clasificación:
 - Finalice el test tras dos o tres vueltas
 - Use poco combustible
 
@@ -46,42 +46,42 @@ Para reglajes de carrera:
 - No finalice el test antes de 5 vueltas
 - Llene el deposito de combustible
 
-Las presiones en caliente se miden en la linea de meta, sin embargo, se puede seleccionar otro punto de la pista.
+Las presiones en caliente se miden en la línea de meta, sin embargo, se puede seleccionar otro punto de la pista.
 Solamente conduzca hasta dicho punto y pause el juego (o detenga el coche).
-Despues haga click en "Opciones > Opciones del test de presiones > Leer las presiones en caliente en la posicion actual"
+Despues haga click en "Opciones > Opciones del test de presiones > Leer las presiones en caliente en la posición actual"
 
 ---------------------
-�PARA QUE SIRVE ESTO?
+¿PARA QUÉ SIRVE ESTO?
 ---------------------
 
-"Accion > Reiniciar test":
+"Acción > Reiniciar test":
 Ejecutar otro test de presiones desde el principio.
 
-"Accion > Usar presiones obje&tivo por defecto":
-Usar las presiones objetivo predefinidas para cada compuesto de neumatico. Util tras finalizar el test.
+"Acción > Usar presiones obje&tivo por defecto":
+Usar las presiones objetivo predefinidas para cada compuesto de neumático. Útil tras finalizar el test.
 
-"Accion > Copiar resultados al portapapeles":
-Tras finalizar el test, copiar los resultados en formato tabla, apropiado para hojas de calculo (presionar CTRL-V para pegar).
+"Acción > Copiar resultados al portapapeles":
+Tras finalizar el test, copiar los resultados en formato tabla, apropiado para hojas de cálculo (presiónar CTRL-V para pegar).
 
-"Accion > Leer presiones en caliente en l�nea de meta":
+"Acción > Leer presiones en caliente en línea de meta":
 Autodescriptivo.
 
-"Opciones > Opciones del test de presiones > Leer las presiones en caliente en la posicion actual":
+"Opciones > Opciones del test de presiones > Leer las presiones en caliente en la posición actual":
 Ver arriba.
 
 "Opciones > Opciones del test de presiones > Completar test al teletransportarse al garage":
-El test de presiones finalizara en el momento en que entre en el menu de pausa y seleccione "volver al garage".
-De este modo puede ejecutar cualquier n�mero de vueltas.
+El test de presiones finalizará en el momento en que entre en el menú de pausa y seleccione "volver al garage".
+De este modo puede ejecutar cualquier número de vueltas.
 
 "Opciones > Opciones del test de presiones > Completar test tras NN vueltas":
-El test de presiones finalizara automaticamente tras completar un numero de vueltas.
+El test de presiones finalizará automáticamente tras completar un número de vueltas.
 
 "Opciones > Opciones de esta app > Mantener siempre visible":
-La ventana de la app permanecera por encima de la pantalla de juego.
+La ventana de la app permanecerá por encima de la pantalla de juego.
 
 "Opciones > Opciones de esta app > Opciones de copiar-pegar":
-Elegir que campos de datos (y su orden) se copiaran al portapapeles. Util para documentar el resultado del test en una hoja de calculo.
+Elegir que campos de datos (y su orden) se copiaran al portapapeles. Útil para documentar el resultado del test en una hoja de cálculo.
 
-"Options > Opciones de esta app > CLimpiar mis claves de registro de Windows (al salir)":
-Esta app guarda las opciones de usuario en el registro de Windows. Seleccionela para borrar dichas opciones si planea dejar de usar la app.
-Ser� efectiva tras cerrar la aplicacion.
+"Opciones > Opciones de esta app > CLimpiar mis claves de registro de Windows (al salir)":
+Esta app guarda las opciones de usuario en el registro de Windows. Selecciónela para borrar dichas opciones si planea dejar de usar la app.
+Será efectiva tras cerrar la aplicación.

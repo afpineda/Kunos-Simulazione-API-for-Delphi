@@ -74,6 +74,9 @@ type
     Btn_ForceTrackData: TButton;
     AI_Receiving: TActivityIndicator;
     Timer_activityCheck: TTimer;
+    Page_Plotter: TTabSheet;
+    PB_Plotter: TPaintBox;
+    Btn_ClearPlotter: TButton;
     procedure FormCreate(Sender: TObject);
     procedure Btn_DefConnFieldClick(Sender: TObject);
     procedure Btn_ClearLogClick(Sender: TObject);
@@ -85,8 +88,12 @@ type
     procedure Btn_ForceTrackDataClick(Sender: TObject);
     procedure Grid_carEntriesDblClick(Sender: TObject);
     procedure Timer_activityCheckTimer(Sender: TObject);
+    procedure Btn_ClearPlotterClick(Sender: TObject);
+    procedure PB_PlotterPaint(Sender: TObject);
   private
     { Private declarations }
+    PlotBmp: TBitmap;
+
     Protocol: TksUDPv4BroadcastingProtocol;
     procedure OnConnection(Sender: TksBroadcastingProtocol;
       const result: TKsRegistrationResult);
@@ -100,6 +107,8 @@ type
       trackData: TksTrackData);
     procedure OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent);
+
+    procedure PlotCar(const carData: TKsCarData);
   public
     { Public declarations }
   end;
@@ -205,6 +214,7 @@ begin
     item.SubItems.Add(Laps.ToString);
     item.SubItems.Add(LastLap.laptimeMS.ToString);
   end;
+  PlotCar(carData);
 end;
 
 procedure TForm_main.OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
@@ -298,6 +308,7 @@ begin
     Memo_Log.Lines.Add('Registration request sent to ' + Edt_Host.Text + ':' +
       Edt_Port.Text);
     Timer_activityCheck.Interval := Protocol.UpdateIntervalMs * 7;
+
   except
     on E: Exception do
     begin
@@ -331,7 +342,6 @@ begin
   end;
 end;
 
-
 // ----------------------------------------------------------------------------
 // Track page
 // ----------------------------------------------------------------------------
@@ -362,11 +372,57 @@ begin
 end;
 
 // ----------------------------------------------------------------------------
+// Plotter page
+// ----------------------------------------------------------------------------
+
+procedure TForm_main.Btn_ClearPlotterClick(Sender: TObject);
+var
+  aux: Integer;
+begin
+  with PlotBmp do
+  begin
+    Canvas.Brush.Style := bsSolid;
+    Canvas.Brush.Color := clWhite;
+    Canvas.Pen.Color := clRed;
+    Canvas.Rectangle(0, 0, Width, Height);
+    aux := ClientRect.Height div 2;
+    Canvas.MoveTo(0, aux);
+    Canvas.LineTo(Width, aux);
+    aux := Width div 2;
+    Canvas.MoveTo(aux, 0);
+    Canvas.LineTo(aux, Height);
+  end;
+  PB_Plotter.Refresh;
+end;
+
+procedure TForm_main.PB_PlotterPaint(Sender: TObject);
+begin
+  PB_Plotter.Canvas.StretchDraw(PB_Plotter.ClientRect, PlotBmp);
+end;
+
+procedure TForm_main.PlotCar(const carData: TKsCarData);
+var
+  x, y: Integer;
+begin
+  PlotBmp.Canvas.Brush.Style := bsSolid;
+  PlotBmp.Canvas.Brush.Color := clBlack; //- carData.carIndex;
+  PlotBmp.Canvas.Pen.Color := PlotBmp.Canvas.Brush.Color;
+  x := (PlotBmp.Width div 2) + Trunc(carData.WorldPosX * 20);
+  y := (PlotBmp.Height div 2) + Trunc(carData.WorldPosY * 20);
+  PlotBmp.Canvas.Rectangle(x - 2, y - 2, x + 2, y + 2);
+  PB_Plotter.Refresh;
+end;
+
+// ----------------------------------------------------------------------------
 // Main form events
 // ----------------------------------------------------------------------------
 
 procedure TForm_main.FormCreate(Sender: TObject);
 begin
+  PlotBmp := TBitmap.Create;
+  PlotBmp.Width := 500;
+  PlotBmp.Height := 500;
+  PlotBmp.Transparent := false;
   Protocol := TksUDPv4BroadcastingProtocol.Create;
   Protocol.OnRegistration := OnConnection;
   Protocol.OnEntryList := OnEntryList;
@@ -392,11 +448,14 @@ begin
   Grid_carEntries.RowCount := 0;
   Grid_drivers.RowCount := 0;
   AI_Receiving.Animate := false;
+  PB_Plotter.Canvas.Brush.Style := TBrushStyle.bsSolid;
+  Btn_ClearPlotter.Click;
 end;
 
 procedure TForm_main.FormDestroy(Sender: TObject);
 begin
   Protocol.Free;
+  PlotBmp.Free;
 end;
 
 procedure TForm_main.Grid_carEntriesDblClick(Sender: TObject);

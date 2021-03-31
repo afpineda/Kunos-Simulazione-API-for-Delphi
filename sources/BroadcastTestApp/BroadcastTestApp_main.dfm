@@ -23,10 +23,9 @@ object Form_main: TForm_main
     Top = 0
     Width = 602
     Height = 371
-    ActivePage = Page_CarData
+    ActivePage = Page_Plotter
     Align = alClient
     TabOrder = 0
-    ExplicitWidth = 314
     object Page_Connect: TTabSheet
       Caption = 'Connection'
       ExplicitWidth = 306
@@ -406,6 +405,30 @@ object Form_main: TForm_main
         TabOrder = 3
         OnClick = Btn_ForceTrackDataClick
         ExplicitWidth = 306
+      end
+    end
+    object Page_Plotter: TTabSheet
+      Caption = 'Plotter'
+      ImageIndex = 5
+      ExplicitLeft = 8
+      ExplicitTop = 28
+      object PB_Plotter: TPaintBox
+        Left = 0
+        Top = 48
+        Width = 594
+        Height = 295
+        Align = alBottom
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        OnPaint = PB_PlotterPaint
+      end
+      object Btn_ClearPlotter: TButton
+        Left = 3
+        Top = 9
+        Width = 75
+        Height = 25
+        Caption = 'Clear'
+        TabOrder = 0
+        OnClick = Btn_ClearPlotterClick
       end
     end
   end
