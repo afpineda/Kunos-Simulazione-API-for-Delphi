@@ -23,12 +23,11 @@ object Form_main: TForm_main
     Top = 0
     Width = 602
     Height = 371
-    ActivePage = Page_Plotter
+    ActivePage = Page_CarData
     Align = alClient
     TabOrder = 0
     object Page_Connect: TTabSheet
       Caption = 'Connection'
-      ExplicitWidth = 306
       object Panel_connection: TPanel
         Left = 0
         Top = 0
@@ -39,7 +38,6 @@ object Form_main: TForm_main
         Caption = 'Panel_connection'
         ShowCaption = False
         TabOrder = 0
-        ExplicitWidth = 306
         DesignSize = (
           594
           201)
@@ -103,7 +101,6 @@ object Form_main: TForm_main
           Anchors = [akTop, akRight]
           FrameDelay = 100
           IndicatorType = aitRotatingSector
-          ExplicitLeft = 264
         end
       end
       object Memo_Log: TMemo
@@ -117,7 +114,6 @@ object Form_main: TForm_main
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1
-        ExplicitWidth = 306
       end
       object Panel_ConnectButtons: TPanel
         Left = 0
@@ -128,7 +124,6 @@ object Form_main: TForm_main
         BevelOuter = bvNone
         ShowCaption = False
         TabOrder = 2
-        ExplicitWidth = 306
         DesignSize = (
           594
           41)
@@ -160,14 +155,12 @@ object Form_main: TForm_main
           Caption = 'Clear Log'
           TabOrder = 2
           OnClick = Btn_ClearLogClick
-          ExplicitLeft = 226
         end
       end
     end
     object Page_carEntries: TTabSheet
       Caption = 'Entries'
       ImageIndex = 1
-      ExplicitWidth = 306
       object Lbl_drivers: TLabel
         Left = 0
         Top = 167
@@ -211,7 +204,6 @@ object Form_main: TForm_main
         ShowHint = True
         TabOrder = 0
         OnDblClick = Grid_carEntriesDblClick
-        ExplicitWidth = 306
       end
       object Grid_drivers: TStringGrid
         Left = 0
@@ -221,13 +213,11 @@ object Form_main: TForm_main
         Align = alClient
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect]
         TabOrder = 1
-        ExplicitWidth = 306
       end
     end
     object Page_CarData: TTabSheet
       Caption = 'Car'
       ImageIndex = 2
-      ExplicitWidth = 306
       object List_CarData: TListView
         Left = 0
         Top = 0
@@ -243,8 +233,10 @@ object Form_main: TForm_main
             Width = 70
           end
           item
-            Caption = 'X,Y,Yaw'
-            Width = 80
+            Caption = 'X'
+          end
+          item
+            Caption = 'Y'
           end
           item
             Caption = 'Official pos'
@@ -270,13 +262,11 @@ object Form_main: TForm_main
         RowSelect = True
         TabOrder = 0
         ViewStyle = vsReport
-        ExplicitWidth = 306
       end
     end
     object Page_SessionData: TTabSheet
       Caption = 'Session'
       ImageIndex = 3
-      ExplicitWidth = 306
       object VE_Session: TValueListEditor
         Left = 0
         Top = 0
@@ -285,7 +275,6 @@ object Form_main: TForm_main
         Align = alClient
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goAlwaysShowEditor, goThumbTracking]
         TabOrder = 0
-        ExplicitWidth = 306
         ColWidths = (
           150
           150)
@@ -294,7 +283,6 @@ object Form_main: TForm_main
     object Page_TrackData: TTabSheet
       Caption = 'Track'
       ImageIndex = 4
-      ExplicitWidth = 306
       object Lbl_Hud: TLabel
         Left = 0
         Top = 74
@@ -338,7 +326,6 @@ object Form_main: TForm_main
           'b=2'
           'c=3')
         TabOrder = 0
-        ExplicitWidth = 306
         ColWidths = (
           150
           150)
@@ -363,7 +350,6 @@ object Form_main: TForm_main
         TabOrder = 1
         ViewStyle = vsList
         OnDblClick = LV_HUDDblClick
-        ExplicitWidth = 306
       end
       object LV_Cam: TListView
         Left = 0
@@ -393,7 +379,6 @@ object Form_main: TForm_main
         TabOrder = 2
         ViewStyle = vsReport
         OnDblClick = LV_CamDblClick
-        ExplicitWidth = 306
       end
       object Btn_ForceTrackData: TButton
         Left = 0
@@ -404,14 +389,11 @@ object Form_main: TForm_main
         Caption = 'Force update'
         TabOrder = 3
         OnClick = Btn_ForceTrackDataClick
-        ExplicitWidth = 306
       end
     end
     object Page_Plotter: TTabSheet
       Caption = 'Plotter'
       ImageIndex = 5
-      ExplicitLeft = 8
-      ExplicitTop = 28
       object PB_Plotter: TPaintBox
         Left = 0
         Top = 48

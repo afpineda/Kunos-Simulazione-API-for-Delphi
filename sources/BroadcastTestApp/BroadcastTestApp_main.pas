@@ -188,7 +188,11 @@ begin
     end;
   end
   else
+  begin
     Memo_Log.Lines.Add('Entry list cleared');
+    List_CarData.Items.Clear;
+  end;
+
 
   NewList.Free;
 end;
@@ -197,17 +201,29 @@ procedure TForm_main.OnCarDataUpdate(Sender: TksBroadcastingProtocol;
   const carData: TKsCarData);
 var
   item: TListItem;
+  i: Integer;
+  carIndexStr: string;
 begin
   // Memo_Log.Lines.Add('Car data updated');
-  if List_CarData.Items.Count > 250 then
-    List_CarData.Items.Clear;
-  item := List_CarData.Items.Insert(0);
+  item := nil;
+  i := 0;
+  carIndexStr := carData.carIndex.ToString;
+  while (item = nil) and (i < List_CarData.Items.Count) do
+  begin
+    if (List_CarData.Items[i].Caption = carIndexStr) then
+      item := List_CarData.Items[i];
+    inc(i);
+  end;
+  if (item = nil) then
+    item := List_CarData.Items.Add
+  else
+    item.SubItems.Clear;
   with carData do
   begin
     item.Caption := carData.carIndex.ToString;
     item.SubItems.Add(driverIndex.ToString);
-    item.SubItems.Add(Format('%.2f / %.2f / %.2f',
-      [WorldPosX, WorldPosY, Yaw]));
+    item.SubItems.Add(Format('%.4f',[WorldPosX]));
+    item.SubItems.Add(Format('%.4f',[WorldPosY]));
     item.SubItems.Add(Position.ToString);
     item.SubItems.Add(TrackPosition.ToString);
     item.SubItems.Add(Format('%2.1f%%', [SplinePosition * 100]));
@@ -405,7 +421,7 @@ var
   x, y: Integer;
 begin
   PlotBmp.Canvas.Brush.Style := bsSolid;
-  PlotBmp.Canvas.Brush.Color := clBlack; //- carData.carIndex;
+  PlotBmp.Canvas.Brush.Color := clBlack; // - carData.carIndex;
   PlotBmp.Canvas.Pen.Color := PlotBmp.Canvas.Brush.Color;
   x := (PlotBmp.Width div 2) + Trunc(carData.WorldPosX * 20);
   y := (PlotBmp.Height div 2) + Trunc(carData.WorldPosY * 20);
