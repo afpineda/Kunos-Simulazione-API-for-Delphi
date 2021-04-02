@@ -30,6 +30,7 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.Threading,
+  System.SyncObjs,
   ksBroadcasting.Data,
   ksBroadcasting;
 
@@ -84,6 +85,7 @@ type
     FOnCarData: TOnCarDataEvent;
     FOnSessionData: TOnSessionDataEvent;
     FOnBroadcastingEvent: TOnBroadcastingEventEvent;
+    ongoing: TEvent;
     expectedEntryCount: integer;
     listener: ITask;
     cancelListener: boolean;
@@ -101,7 +103,10 @@ type
     destructor Destroy; override;
     procedure RequestFocusOnRaceNumber(const carRaceNumber: integer;
       const cameraSet: string = ''; const camera: string = ''); overload;
-
+    procedure Register(const displayName: string;
+      const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
+      const commandPassword: string = '');
+    procedure Unregister;
     property OnBroadcastingEvent: TOnBroadcastingEventEvent
       read FOnBroadcastingEvent write FOnBroadcastingEvent;
     property OnCarData: TOnCarDataEvent read FOnCarData write FOnCarData;
@@ -134,14 +139,16 @@ begin
   FOnBroadcastingEvent := nil;
   FEntryList := TKsEntryList.Create;
   expectedEntryCount := 0;
-  MessageDelegate.Start;
   cancelListener := false;
+  ongoing := TEvent.Create(nil, true, false, '');
   listener := TTask.Create(
     procedure
     begin
       while (not cancelListener) do
         try
-          ProcessMessage;
+          ongoing.WaitFor;
+          if (not cancelListener) then
+            ProcessMessage;
         except
         end;
     end);
@@ -150,11 +157,26 @@ end;
 
 destructor TksBroadcastingProtocol.Destroy;
 begin
+  inherited;
   cancelListener := true;
-  MessageDelegate.Stop;
+  ongoing.SetEvent;
   listener.Wait;
   FEntryList.Free;
-  inherited;
+  ongoing.Free;
+end;
+
+procedure TksBroadcastingProtocol.Register(const displayName: string;
+  const connectionPassword: string; const msUpdateInterval: Int32;
+  const commandPassword: string);
+begin
+  inherited Register(displayName,connectionPassword,msUpdateInterval,commandPassword);
+  ongoing.SetEvent;
+end;
+
+procedure TksBroadcastingProtocol.Unregister;
+begin
+ ongoing.ResetEvent;
+ inherited Unregister;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const result: TKsRegistrationResult);
