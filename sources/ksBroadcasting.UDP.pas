@@ -99,8 +99,9 @@ class procedure TksUDPDelegate.CheckSocketResult(ResultCode: integer;
   const Op: string);
 begin
   if ResultCode < 0 then
-    raise ESocketError.CreateResFmt(@sSocketError,
-      [SysErrorMessage(WSAGetLastError), WSAGetLastError, Op]);
+    if WSAGetLastError <> WSAEWOULDBLOCK then
+      raise ESocketError.CreateResFmt(@sSocketError,
+        [SysErrorMessage(WSAGetLastError), WSAGetLastError, Op]);
 end;
 
 constructor TksUDPDelegate.Create;
