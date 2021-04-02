@@ -49,12 +49,12 @@ type
       receiving. Messages/datagrams are TBytesStream instances.
 
       START:
-      Called once at protocol instantiation. Should perform some kind of
-      initialization, like socket creation and binding.
+      Called one or more times before any message is sent or received.
 
       STOP:
-      Called once at protocol instace destruction. Should unblock any pending
-      thread at "ReceiveFrom". For example, by closing a socket.
+      Called once when no more messages are to be sent or received.
+      Should unblock any pending thread at "ReceiveFrom".
+      For example, by closing a socket.
 
       SendTo:
       Send datagram. Non-blocking.
@@ -83,7 +83,7 @@ type
 
       MSG:
       Any object passed to "Msg" (TKsCarInfo or TksTrackData) should be
-      destroyed by the descendant class.
+      destroyed by the descendant class if not used.
     }
   public const
     BROADCASTING_PROTOCOL_VERSION = 4;
@@ -110,6 +110,7 @@ type
     property MessageDelegate: IksMessageDelegate read FMessageDelegate;
   public
     constructor Create(msgDelegate: IksMessageDelegate);
+    destructor Destroy; override;
     procedure Register(const displayName: string;
       const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
       const commandPassword: string = '');
@@ -164,6 +165,11 @@ begin
   end
   else
     raise Exception.Create('TksBroadcastingProtocol: message delegate is null');
+end;
+
+destructor TksBroadcastingMsgHandler.Destroy;
+begin
+  Unregister;
 end;
 
 // ---- INBOUND MESSAGES
@@ -297,6 +303,7 @@ begin
   begin
     outStrm := TBytesStream.Create;
     try
+      FMessageDelegate.Start;
       outStrm.WriteBuffer(Msg, sizeof(Msg));
       outStrm.WriteBuffer(version, sizeof(version));
       WriteString(outStrm, displayName);
@@ -329,6 +336,7 @@ begin
       outStrm.Free;
     end;
   end;
+  FMessageDelegate.Stop;
 end;
 
 procedure TksBroadcastingMsgHandler.RequestEntryList(const force: boolean);
