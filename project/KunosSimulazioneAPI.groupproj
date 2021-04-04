@@ -15,6 +15,9 @@
         <Projects Include="BroadcastTestApp.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="ACAutoSaveReplay.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -59,14 +62,23 @@
     <Target Name="BroadcastTestApp:Make">
         <MSBuild Projects="BroadcastTestApp.dproj" Targets="Make"/>
     </Target>
+    <Target Name="ACAutoSaveReplay">
+        <MSBuild Projects="ACAutoSaveReplay.dproj"/>
+    </Target>
+    <Target Name="ACAutoSaveReplay:Clean">
+        <MSBuild Projects="ACAutoSaveReplay.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ACAutoSaveReplay:Make">
+        <MSBuild Projects="ACAutoSaveReplay.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="DMATestApp;ACPressureTest;ACDataSpotter;BroadcastTestApp"/>
+        <CallTarget Targets="DMATestApp;ACPressureTest;ACDataSpotter;BroadcastTestApp;ACAutoSaveReplay"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="DMATestApp:Clean;ACPressureTest:Clean;ACDataSpotter:Clean;BroadcastTestApp:Clean"/>
+        <CallTarget Targets="DMATestApp:Clean;ACPressureTest:Clean;ACDataSpotter:Clean;BroadcastTestApp:Clean;ACAutoSaveReplay:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="DMATestApp:Make;ACPressureTest:Make;ACDataSpotter:Make;BroadcastTestApp:Make"/>
+        <CallTarget Targets="DMATestApp:Make;ACPressureTest:Make;ACDataSpotter:Make;BroadcastTestApp:Make;ACAutoSaveReplay:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

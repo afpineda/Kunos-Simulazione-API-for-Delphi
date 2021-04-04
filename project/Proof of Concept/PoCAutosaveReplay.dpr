@@ -8,7 +8,8 @@ uses
   ksBroadcasting in '..\..\sources\ksBroadcasting.pas',
   ksBroadcasting.UDP in '..\..\sources\ksBroadcasting.UDP.pas',
   PoCAutosaveReplay_protocol in '..\..\sources\ProofOfConcept\PoCAutosaveReplay_protocol.pas',
-  ksBroadcasting.Protocol in '..\..\sources\ksBroadcasting.Protocol.pas';
+  ksBroadcasting.Protocol in '..\..\sources\ksBroadcasting.Protocol.pas',
+  WinFolders in '..\..\sources\Lib\WinFolders.pas';
 
 {$R *.res}
 

@@ -1,4 +1,28 @@
-unit PoCAutosaveReplay_protocol;
+unit ACAutoSave_protocol;
+
+{ *******************************************************
+
+  Auto save replay for AC/ACC
+
+  Sends the "save replay" key to ACC at regular intervals
+
+  *******************************************************
+
+  (C) 2021. Ángel Fernández Pineda. Madrid. Spain.
+
+  This work is licensed under the Creative Commons
+  Attribution-ShareAlike 3.0 Unported License. To
+  view a copy of this license,
+  visit http://creativecommons.org/licenses/by-sa/3.0/
+  or send a letter to Creative Commons,
+  444 Castro Street, Suite 900,
+  Mountain View, California, 94041, USA.
+
+  *******************************************************
+
+  [2021-04-04] First implementation
+
+  ******************************************************* }
 
 interface
 
@@ -6,8 +30,6 @@ uses
   ksBroadcasting,
   ksBroadcasting.UDP,
   System.Net.Socket,
-  System.Threading,
-  System.SyncObjs,
   System.Classes,
   ksBroadcasting.Data;
 
@@ -16,7 +38,7 @@ type
   public const
     DISPLAY_NAME = 'AutoSaveReplay';
   public type
-    TState = (NotRegistered, Waiting, Start, InProgress);
+    TState = (NotRegistered, Waiting, InProgress);
   private
     FState: TState;
     FDelegate: TksUDPDelegate;
@@ -25,13 +47,14 @@ type
     FLiveRemainingTime: Single;
     FLiveSessionType: TksRaceSessionType;
     FLiveSessionPhase: TksSessionPhase;
-    FReplayStartTime: Single;
-    FReplaySessionType: TksRaceSessionType;
-    FOnSaveReplay: TNotifyEvent;
+    FAutosaveSessionTime: Single;
+    FOnSaveReplayEvent: TNotifyEvent;
+    FOnStateChangeEvent: TNotifyEvent;
     FSaveOnEndOfSession: boolean;
     FConnectionEndPoint: TNetEndPoint;
   protected
     procedure doOnSaveReplay;
+    procedure doOnStateChange;
     procedure Msg(const result: TKsRegistrationResult); overload; override;
     procedure Msg(const sessionData: TKsSessionData); overload; override;
     procedure Msg(const carData: TKsCarData); overload; override;
@@ -44,13 +67,17 @@ type
   public
     constructor Create;
     procedure Start(Port: integer; const connectionPwd: string);
-    // procedure Unregister;
-    property OnSaveReplay: TNotifyEvent read FOnSaveReplay write FOnSaveReplay;
+    property OnSaveReplay: TNotifyEvent read FOnSaveReplayEvent
+      write FOnSaveReplayEvent;
+    property OnStateChangeEvent: TNotifyEvent read FOnStateChangeEvent
+      write FOnStateChangeEvent;
     property LiveSessionTime: Single read FLiveSessionTime;
     property LiveRemainingTime: Single read FLiveRemainingTime;
     property LiveSessionType: TksRaceSessionType read FLiveSessionType;
     property LiveSessionPhase: TksSessionPhase read FLiveSessionPhase
       write FLiveSessionPhase;
+    property SaveIntervalSeconds: integer read FSaveInterval
+      write FSaveInterval;
     property SaveOnEndOfSession: boolean read FSaveOnEndOfSession
       write FSaveOnEndOfSession;
     property State: TState read FState write FState;
@@ -59,16 +86,15 @@ type
 implementation
 
 uses
-  Winapi.Winsock2,
-  System.DateUtils,
-  System.SysUtils;
+  Winapi.Winsock2;
 
 constructor TAutosaveReplayProtocol.Create;
 begin
   FDelegate := TksUDPDelegate.Create;
   inherited Create(FDelegate);
   FState := NotRegistered;
-  FOnSaveReplay := nil;
+  FOnSaveReplayEvent := nil;
+  FOnStateChangeEvent := nil;
   FConnectionEndPoint.Family := 2;
 {$IFDEF DEBUG}
   FConnectionEndPoint.SetAddress('192.168.1.160');
@@ -93,12 +119,16 @@ end;
 procedure TAutosaveReplayProtocol.AfterUnregister;
 begin
   FState := NotRegistered;
+  doOnStateChange;
 end;
 
 procedure TAutosaveReplayProtocol.Msg(const result: TKsRegistrationResult);
 begin
   if (result.Success) then
+  begin
     FState := Waiting;
+    doOnStateChange;
+  end;
 end;
 
 procedure TAutosaveReplayProtocol.Msg(const carEntryCount: integer);
@@ -116,9 +146,14 @@ begin
   trackData.Free;
 end;
 
+function ComputeTargetTime(time: int64; interval: integer): int64;
+begin
+  result := time div interval;
+  result := (result + 1) * interval;
+end;
+
 procedure TAutosaveReplayProtocol.Msg(const sessionData: TKsSessionData);
 var
-  targetTime: Single;
   mustSave: boolean;
 begin
   FLiveSessionTime := sessionData.SessionTime;
@@ -130,22 +165,23 @@ begin
       begin
         if (FLiveSessionType = TksRaceSessionType.Qualifying) or
           (FLiveSessionType = TksRaceSessionType.Race) then
-          if (sessionData.Phase = TksSessionPhase.Session) then
-            FState := TState.Start;
-      end;
-    TState.Start:
-      begin
-        FState := InProgress;
-        FReplayStartTime := FLiveSessionTime;
-        FReplaySessionType := FLiveSessionType;
+          if (FLiveSessionPhase = TksSessionPhase.Session) then
+          begin
+            FState := TState.InProgress;
+            FAutosaveSessionTime := ComputeTargetTime(Trunc(FLiveSessionTime),
+              (FSaveInterval * 1000));
+            doOnStateChange;
+          end;
       end;
     TState.InProgress:
       begin
-        if (FLiveSessionType <> FReplaySessionType) then
+        if ((FLiveSessionType <> TksRaceSessionType.Qualifying) and
+          (FLiveSessionType <> TksRaceSessionType.Race)) or
+          (FLiveSessionPhase < TksSessionPhase.Session) then
         begin
-          // Note: missed messages, protocol error or too much delay between
-          // mesages. A reset is needed.
+          // Note: session skipped or restarted
           FState := TState.Waiting;
+          doOnStateChange;
           Exit;
         end;
         if (FLiveSessionPhase > TksSessionPhase.SessionOver) then
@@ -153,14 +189,16 @@ begin
           mustSave := FSaveOnEndOfSession;
           FState := TState.Waiting;
         end
-        else
+        else if (FLiveSessionPhase = TksSessionPhase.Session) then
         begin
-          targetTime := FReplayStartTime + (FSaveInterval * 60000.0);
-          mustSave := (FLiveSessionTime >= targetTime);
-          FState := TState.Start;
-        end;
+          mustSave := (FLiveSessionTime >= FAutosaveSessionTime);
+        end
+        else
+          mustSave := false;
         if (mustSave) then
         begin
+          FAutosaveSessionTime := ComputeTargetTime(Trunc(FLiveSessionTime),
+            (FSaveInterval * 1000));
           doOnSaveReplay;
         end;
       end;
@@ -179,13 +217,22 @@ end;
 
 procedure TAutosaveReplayProtocol.doOnSaveReplay;
 begin
-  if Assigned(FOnSaveReplay) then
+  if Assigned(FOnSaveReplayEvent) then
     TThread.Synchronize(nil,
       procedure
       begin
-        FOnSaveReplay(self);
+        FOnSaveReplayEvent(self);
       end);
 end;
 
+procedure TAutosaveReplayProtocol.doOnStateChange;
+begin
+  if Assigned(FOnStateChangeEvent) then
+    TThread.Synchronize(nil,
+      procedure
+      begin
+        FOnStateChangeEvent(self);
+      end);
+end;
 
 end.

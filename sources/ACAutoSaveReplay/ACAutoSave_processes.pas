@@ -1,15 +1,37 @@
-unit PoCAutosaveReplay_proc;
+unit ACAutoSave_processes;
+
+{ *******************************************************
+
+  Auto save replay for AC/ACC
+
+  Sends the "save replay" key to ACC at regular intervals
+
+  *******************************************************
+
+  (C) 2021. Ángel Fernández Pineda. Madrid. Spain.
+
+  This work is licensed under the Creative Commons
+  Attribution-ShareAlike 3.0 Unported License. To
+  view a copy of this license,
+  visit http://creativecommons.org/licenses/by-sa/3.0/
+  or send a letter to Creative Commons,
+  444 Castro Street, Suite 900,
+  Mountain View, California, 94041, USA.
+
+  *******************************************************
+
+  [2021-04-04] First implementation
+
+  ******************************************************* }
 
 interface
 
 uses
-  // system.Generics.Collections,
   system.SysUtils,
-  // WinApi.tlhelp32,
   WinApi.Windows;
 
-function FindWindowHandle(const findExeName: string): HWND;
-function SendInputToExe(const ExeName: string; vkey: DWORD): boolean;
+function AutosaveReplay: boolean;
+function IsACCRunning: boolean;
 
 implementation
 
@@ -17,6 +39,9 @@ uses
   WinApi.psapi,
   system.Classes,
   system.IOUtils;
+
+const
+  ACC_EXE = 'AC2-Win64-Shipping.exe';
 
 function GetExeName(Handle: THandle): string;
 var
@@ -114,9 +139,18 @@ begin
     inp[1].ki.dwFlags := KEYEVENTF_KEYUP;
 
     SetForegroundWindow(Handle);
-    Result := SendInput(Length(inp), inp[0], sizeof(TInput))
-      = Length(inp);
+    Result := SendInput(Length(inp), inp[0], sizeof(TInput)) = Length(inp);
   end;
+end;
+
+function IsACCRunning: boolean;
+begin
+  Result := FindWindowHandle(ACC_EXE) <> 0;
+end;
+
+function AutosaveReplay: boolean;
+begin
+  Result := SendInputToExe(ACC_EXE,LOWORD(VkKeyScan('m')));
 end;
 
 end.

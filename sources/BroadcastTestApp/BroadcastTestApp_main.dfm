@@ -23,7 +23,7 @@ object Form_main: TForm_main
     Top = 0
     Width = 602
     Height = 371
-    ActivePage = Page_CarData
+    ActivePage = Page_Plotter
     Align = alClient
     TabOrder = 0
     object Page_Connect: TTabSheet
@@ -413,10 +413,5 @@ object Form_main: TForm_main
         OnClick = Btn_ClearPlotterClick
       end
     end
-  end
-  object Timer_activityCheck: TTimer
-    OnTimer = Timer_activityCheckTimer
-    Left = 492
-    Top = 28
   end
 end

@@ -22,6 +22,8 @@ unit ksBroadcasting.UDP;
 
   [2021-03-28] First implementation
 
+  [2021-04-03] Reworked
+
   ******************************************************* }
 
 interface
@@ -48,13 +50,13 @@ type
       NOTES:
       Implemented by the means of Wnapi.Winsock2. However, network addresses are
       implemented as System.Net.Socket.TNetEndPoint instances.
-      RemoteEndPoint should NOT change while broadcasting protocol is running.
-      Check "TksBroadcastingMsgHandler.Registered".
+      RemoteEndPoint is NOT allowed to change while broadcasting protocol is running.
     }
-  private
+  strict private
     FSocket: Winapi.Winsock2.TSocket;
     FRemoteEndPoint: TNetEndPoint;
     class procedure CheckSocketResult(ResultCode: integer; const Op: string);
+    procedure SetRemoteEndPoint(const ep: TNetEndPoint);
   public
     constructor Create;
     destructor Destroy; override;
@@ -63,7 +65,7 @@ type
     procedure SendTo(Data: TBytesStream);
     function ReceiveFrom: TBytesStream;
     property RemoteEndPoint: TNetEndPoint read FRemoteEndPoint
-      write FRemoteEndPoint;
+      write SetRemoteEndPoint;
   end;
 
 type
@@ -74,10 +76,13 @@ type
     }
   private
     FDelegate: TksUDPDelegate;
+    FRemoteEndPoint: TNetEndPoint;
     function GetRemoteEndPoint: TNetEndPoint;
+  protected
+    procedure BeforeRegister; override;
   public
     constructor Create(const synchronizedEvents: boolean = true);
-    procedure Register(const RemoteEndPoint: TNetEndPoint;
+    procedure Start(const RemoteEndPoint: TNetEndPoint;
       const displayName: string; const connectionPassword: string;
       const msUpdateInterval: Int32 = 1000; const commandPassword: string = '');
     property RemoteEndPoint: TNetEndPoint read GetRemoteEndPoint;
@@ -190,6 +195,15 @@ begin
   end;
 end;
 
+procedure TksUDPDelegate.SetRemoteEndPoint(const ep: TNetEndPoint);
+begin
+  if FSocket = INVALID_SOCKET then
+  begin
+    FRemoteEndPoint := ep;
+  end else
+    raise ESocketError.Create('Remote end point not allowed to change while socket is in use');
+end;
+
 // --------------------------------------------------------------------------
 // TksUDPv4BroadcastingProtocol
 // --------------------------------------------------------------------------
@@ -207,18 +221,18 @@ begin
   Result := FDelegate.RemoteEndPoint;
 end;
 
-procedure TksUDPv4BroadcastingProtocol.Register(const RemoteEndPoint
-  : TNetEndPoint; const displayName: string; const connectionPassword: string;
+procedure TksUDPv4BroadcastingProtocol.Start(const RemoteEndPoint: TNetEndPoint;
+  const displayName: string; const connectionPassword: string;
   const msUpdateInterval: Int32 = 1000; const commandPassword: string = '');
 begin
-  if (not Registered) then
-  begin
-    FDelegate.RemoteEndPoint := RemoteEndPoint;
-    inherited Register(displayName, connectionPassword, msUpdateInterval,
-      commandPassword);
-  end
-  else
-    raise EksAlreadyRegistered.Create('Already registered to another server');
+  FRemoteEndPoint := RemoteEndPoint;
+  inherited Start(displayName, connectionPassword, msUpdateInterval,
+    commandPassword);
+end;
+
+procedure TksUDPv4BroadcastingProtocol.BeforeRegister;
+begin
+  FDelegate.RemoteEndPoint := FRemoteEndPoint;
 end;
 
 // -------------------------------------------------------------------------

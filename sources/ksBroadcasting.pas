@@ -22,12 +22,16 @@ unit ksBroadcasting;
 
   [2021-03-10] First implementation
 
+  [2021-04-03] Added TksThreadedBroadcastingMsgHandler
+
   ******************************************************* }
 
 interface
 
 uses
   System.Classes,
+  System.Threading,
+  System.SyncObjs,
   ksBroadcasting.Data;
 
 {
@@ -35,6 +39,7 @@ uses
 
   - IksMessageDelegate: interface to implementa data transmision
   - TksBroadcastingMsgHandler: Message handler for broadcasting protocol
+  - TksThreadedBroadcastingMsgHandler: same as above, but threaded.
 }
 
 type
@@ -52,15 +57,15 @@ type
       Called one or more times before any message is sent or received.
 
       STOP:
-      Called once when no more messages are to be sent or received.
-      Should unblock any pending thread at "ReceiveFrom".
-      For example, by closing a socket.
+      Called one or more times when no more messages are to be sent or received.
+      Should unblock any pending thread at "ReceiveFrom" by raising an exception
+      at such thread. For example, by closing a socket.
 
       SendTo:
       Send datagram. Non-blocking.
 
       ReceiveFrom:
-      Receive datagram. Blocking. Caller should destroy received stream.
+      Receive datagram. Blocking. Caller should destroy the received stream.
     }
     procedure Start;
     procedure Stop;
@@ -83,18 +88,21 @@ type
 
       MSG:
       Any object passed to "Msg" (TKsCarInfo or TksTrackData) should be
-      destroyed by the descendant class if not used.
+      destroyed by the descendant class when not used.
     }
   public const
     BROADCASTING_PROTOCOL_VERSION = 4;
-  private
+  strict private
     FConnectionID: Int32;
     FMessageDelegate: IksMessageDelegate;
     FMsgTimestamp: TDateTime;
+    FRegReqTimestamp: TDateTime;
     FUpdateInterval: integer;
     lastEntrylistRequest: TDateTime;
+    RegRequestPending: boolean;
     function GetRegistered: boolean;
   protected
+    function GetRegistrationRequestTimedOut: boolean;
     procedure ProcessMessage;
     procedure Msg(const result: TKsRegistrationResult); overload;
       virtual; abstract;
@@ -106,15 +114,16 @@ type
     procedure Msg(const trackData: TksTrackData); overload; virtual; abstract;
     procedure Msg(const event: TksBroadcastingEvent); overload;
       virtual; abstract;
+    function Register(const displayName: string;
+      const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
+      const commandPassword: string = ''): boolean;
+    function Unregister: boolean;
     property connectionId: Int32 read FConnectionID;
     property MessageDelegate: IksMessageDelegate read FMessageDelegate;
   public
     constructor Create(msgDelegate: IksMessageDelegate);
     destructor Destroy; override;
-    procedure Register(const displayName: string;
-      const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
-      const commandPassword: string = '');
-    procedure Unregister;
+    function IsServerInactive(timeMs: Int64): boolean;
     procedure RequestEntryList(const force: boolean = false);
     procedure RequestFocus(const carIndex: UInt16; const cameraSet: string = '';
       const camera: string = ''); overload;
@@ -125,8 +134,64 @@ type
     procedure RequestHUDPage(const HUDPage: string);
     procedure RequestTrackData;
     property Registered: boolean read GetRegistered;
+    property RegistrationRequestTimedOut: boolean
+      read GetRegistrationRequestTimedOut;
     property LastMsgTimestamp: TDateTime read FMsgTimestamp;
+    property LastRegRequestTimestamp: TDateTime read FRegReqTimestamp;
     property UpdateIntervalMs: integer read FUpdateInterval;
+  end;
+
+type
+  TksThreadedBroadcastingMsgHandler = class(TksBroadcastingMsgHandler)
+    {
+      PURPOUSE:
+      To handle broadcasting protocol messages.
+      Incoming messages are handled in a separate thread.
+      Note: abstract class.
+
+      START:
+      Send a registration request and keep trying (in a separate thread)
+      until attended (succesful or not) or "Stop" is called.
+      If already registered to any server, "Stop" is called previously.
+
+      STOP:
+      If registered, send an unregistration request.
+      In not registered, cancel any pending registration request.
+
+      METHODS CALLED FROM A SEPARATE THREAD:
+      - Msg
+      - RetryRegistrationRequest
+      - NotifyNoServerActivity
+    }
+  strict private
+    ongoing: TEvent;
+    listener: ITask;
+    registrationSpotter: ITask;
+    cancelBackgroundTasks: boolean;
+    serverActivityFlag: boolean;
+    FConnectionPassword: string;
+    FCommandPassword: string;
+    FDisplayName: string;
+    FMaxServerInactivityMs: Int64;
+
+    procedure ReceiveTask;
+    procedure RegistrationTask;
+  protected
+    procedure NotifyNoServerActivity; virtual;
+    procedure AfterUnregister; virtual;
+    procedure BeforeRegister; virtual;
+    procedure RetryRegistrationRequest; virtual;
+    property displayName: string read FDisplayName;
+    property connectionPassword: string read FConnectionPassword;
+    property commandPassword: string read FDisplayName;
+  public
+    constructor Create(msgDelegate: IksMessageDelegate);
+    destructor Destroy; override;
+    procedure Start(const displayName: string; const connectionPassword: string;
+      const msUpdateInterval: Int32 = 1000; const commandPassword: string = '');
+    procedure Stop;
+    property MaxServerInactivityMs: Int64 read FMaxServerInactivityMs
+      write FMaxServerInactivityMs;
   end;
 
 implementation
@@ -160,8 +225,10 @@ begin
     FConnectionID := -1;
     lastEntrylistRequest := Now;
     FMessageDelegate := msgDelegate;
-    FMsgTimestamp := Now;
+    FMsgTimestamp := 0;
+    FRegReqTimestamp := FMsgTimestamp;
     FUpdateInterval := 0;
+    RegRequestPending := false;
   end
   else
     raise Exception.Create('TksBroadcastingProtocol: message delegate is null');
@@ -187,6 +254,7 @@ var
       FConnectionID := result.connectionId
     else
       FConnectionID := -1;
+    RegRequestPending := false;
     Msg(result);
   end;
 
@@ -288,18 +356,53 @@ begin
   result := (FConnectionID >= 0);
 end;
 
+function TksBroadcastingMsgHandler.GetRegistrationRequestTimedOut: boolean;
+begin
+  result := (FConnectionID < 0) and RegRequestPending and
+    (MillisecondsBetween(Now, FRegReqTimestamp) >= (4 * UpdateIntervalMs));
+end;
+
+function TksBroadcastingMsgHandler.IsServerInactive(timeMs: Int64): boolean;{
+  PURPOUSE:
+  Check if server has been inactive (no message received) in the given amount
+  of time.
+
+  PARAMETERS:
+  timeMs: amount of time in milliseconds.
+
+  RESULT:
+  True if no message has been received in the last "timeMs" milliseconds.
+  False otherwise.
+}
+begin
+  result := (FConnectionID >= 0) and
+    (MillisecondsBetween(Now, FMsgTimestamp) >= timeMs);
+end;
+
 // ---- OUTBOUND MESSAGES
 
-procedure TksBroadcastingMsgHandler.Register(const displayName: string;
+function TksBroadcastingMsgHandler.Register(const displayName: string;
   const connectionPassword: string; const msUpdateInterval: Int32;
-  const commandPassword: string);
+  const commandPassword: string): boolean;
+{
+  PURPOUSE:
+  To send a registration message.
+  Destination is left to the message delegate by calling "Start".
+
+  PARAMETERS:
+  Those required by the API
+
+  RESULT:
+  False if already registered, true otherwise.
+}
 const
   version: BYTE = BROADCASTING_PROTOCOL_VERSION;
   Msg: TksOutboundMT = TksOutboundMT.REGISTER_COMMAND_APPLICATION;
 var
   outStrm: TBytesStream;
 begin
-  if (FConnectionID < 0) then
+  result := (FConnectionID < 0);
+  if (result) then
   begin
     outStrm := TBytesStream.Create;
     try
@@ -310,21 +413,32 @@ begin
       WriteString(outStrm, connectionPassword);
       outStrm.WriteBuffer(msUpdateInterval, sizeof(msUpdateInterval));
       WriteString(outStrm, commandPassword);
-      MessageDelegate.SendTo(outStrm);
+      RegRequestPending := true;
+      FRegReqTimestamp := Now;
       FUpdateInterval := msUpdateInterval;
+      MessageDelegate.SendTo(outStrm);
     finally
       outStrm.Free;
     end;
   end;
 end;
 
-procedure TksBroadcastingMsgHandler.Unregister;
+function TksBroadcastingMsgHandler.Unregister: boolean;
+{
+  PURPOUSE:
+  Ask server to stop sending messages.
+
+  RESULT:
+  False if not registered, true otherwise.
+}
 const
   Msg: TksOutboundMT = TksOutboundMT.UNREGISTER_COMMAND_APPLICATION;
 var
   outStrm: TBytesStream;
 begin
-  if (FConnectionID >= 0) then
+  RegRequestPending := false;
+  result := (FConnectionID >= 0);
+  if (result) then
   begin
     outStrm := TBytesStream.Create;
     try
@@ -332,6 +446,8 @@ begin
       outStrm.WriteBuffer(FConnectionID, sizeof(FConnectionID));
       MessageDelegate.SendTo(outStrm);
       FConnectionID := -1;
+      FRegReqTimestamp := 0;
+      FUpdateInterval := 0;
     finally
       outStrm.Free;
     end;
@@ -470,6 +586,119 @@ begin
   end;
 end;
 
+// --------------------------------------------------------------------------
+// TksThreadedBroadcastingMsgHandler
+// --------------------------------------------------------------------------
+
+constructor TksThreadedBroadcastingMsgHandler.Create
+  (msgDelegate: IksMessageDelegate);
+begin
+  ongoing := TEvent.Create(nil, true, false, '');
+  cancelBackgroundTasks := false;
+  listener := TTask.Create(ReceiveTask);
+  listener.Start;
+  registrationSpotter := TTask.Create(RegistrationTask);
+  registrationSpotter.Start;
+  FDisplayName := '';
+  FConnectionPassword := '';
+  FCommandPassword := '';
+  FMaxServerInactivityMs := High(FMaxServerInactivityMs);
+  inherited Create(msgDelegate);
+end;
+
+destructor TksThreadedBroadcastingMsgHandler.Destroy;
+begin
+  cancelBackgroundTasks := true;
+  ongoing.SetEvent;
+  inherited;
+  listener.Wait;
+  registrationSpotter.Wait;
+  ongoing.Free;
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.ReceiveTask;
+begin
+  repeat
+    try
+      ongoing.WaitFor;
+      if (not cancelBackgroundTasks) then
+      begin
+        ProcessMessage;
+        serverActivityFlag := true;
+      end;
+    except
+    end;
+  until (cancelBackgroundTasks);
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.RegistrationTask;
+begin
+  repeat
+    try
+      ongoing.WaitFor;
+      if (not cancelBackgroundTasks) and RegistrationRequestTimedOut then
+      begin
+        RetryRegistrationRequest;
+        sleep(UpdateIntervalMs * 3);
+      end
+      else if (not cancelBackgroundTasks) and serverActivityFlag and
+        IsServerInactive(FMaxServerInactivityMs) then
+      begin
+        serverActivityFlag := false;
+        NotifyNoServerActivity;
+      end;
+    except
+    end;
+  until (cancelBackgroundTasks);
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.Start(const displayName: string;
+  const connectionPassword: string; const msUpdateInterval: Int32;
+  const commandPassword: string);
+begin
+  Stop;
+  FDisplayName := displayName;
+  FConnectionPassword := connectionPassword;
+  FCommandPassword := commandPassword;
+  serverActivityFlag := true;
+  if (FMaxServerInactivityMs <= (msUpdateInterval * 2)) then
+    FMaxServerInactivityMs := msUpdateInterval * 3;
+  BeforeRegister;
+  inherited Register(displayName, connectionPassword, msUpdateInterval,
+    commandPassword);
+  ongoing.SetEvent;
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.Stop;
+begin
+  if (inherited Unregister) then
+    AfterUnregister;
+  ongoing.ResetEvent;
+  FDisplayName := '';
+  FConnectionPassword := '';
+  FCommandPassword := '';
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.BeforeRegister;
+begin
+  // Do nothing
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.AfterUnregister;
+begin
+  // Do nothing
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.RetryRegistrationRequest;
+begin
+  inherited Register(FDisplayName, FConnectionPassword, UpdateIntervalMs,
+    FCommandPassword);
+end;
+
+procedure TksThreadedBroadcastingMsgHandler.NotifyNoServerActivity;
+begin
+  // Do nothing
+end;
 
 // ----------------------------------------------------------------------------
 

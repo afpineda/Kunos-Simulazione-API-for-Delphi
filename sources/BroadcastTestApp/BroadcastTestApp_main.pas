@@ -73,7 +73,6 @@ type
     Splitter2: TSplitter;
     Btn_ForceTrackData: TButton;
     AI_Receiving: TActivityIndicator;
-    Timer_activityCheck: TTimer;
     Page_Plotter: TTabSheet;
     PB_Plotter: TPaintBox;
     Btn_ClearPlotter: TButton;
@@ -87,7 +86,6 @@ type
     procedure LV_CamDblClick(Sender: TObject);
     procedure Btn_ForceTrackDataClick(Sender: TObject);
     procedure Grid_carEntriesDblClick(Sender: TObject);
-    procedure Timer_activityCheckTimer(Sender: TObject);
     procedure Btn_ClearPlotterClick(Sender: TObject);
     procedure PB_PlotterPaint(Sender: TObject);
   private
@@ -107,6 +105,8 @@ type
       trackData: TksTrackData);
     procedure OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent);
+    procedure OnServerInactivity(Sender: TksBroadcastingProtocol;
+      var quit: boolean);
 
     procedure PlotCar(const carData: TKsCarData);
   public
@@ -143,7 +143,13 @@ begin
       Memo_Log.Lines.Add('Rejected');
     end;
   AI_Receiving.Animate := result.success;
-  Timer_activityCheck.Enabled := result.success;
+end;
+
+procedure TForm_main.OnServerInactivity(Sender: TksBroadcastingProtocol;
+  var quit: boolean);
+begin
+  Memo_Log.Lines.Add('Server is inactive');
+  quit := false;
 end;
 
 procedure TForm_main.OnEntryList(Sender: TksBroadcastingProtocol;
@@ -193,7 +199,6 @@ begin
     List_CarData.Items.Clear;
   end;
 
-
   NewList.Free;
 end;
 
@@ -222,8 +227,8 @@ begin
   begin
     item.Caption := carData.carIndex.ToString;
     item.SubItems.Add(driverIndex.ToString);
-    item.SubItems.Add(Format('%.4f',[WorldPosX]));
-    item.SubItems.Add(Format('%.4f',[WorldPosY]));
+    item.SubItems.Add(Format('%.4f', [WorldPosX]));
+    item.SubItems.Add(Format('%.4f', [WorldPosY]));
     item.SubItems.Add(Position.ToString);
     item.SubItems.Add(TrackPosition.ToString);
     item.SubItems.Add(Format('%2.1f%%', [SplinePosition * 100]));
@@ -283,17 +288,6 @@ begin
   trackData.Free;
 end;
 
-procedure TForm_main.Timer_activityCheckTimer(Sender: TObject);
-begin
-  if Protocol.Registered and
-    (MilliSecondsBetween(Now, Protocol.LastMsgTimestamp) >
-    (Protocol.UpdateIntervalMs * 10)) then
-  begin
-    Memo_Log.Lines.Add('No broadcasting activity detected.');
-    Btn_Disconnect.Click;
-  end;
-end;
-
 procedure TForm_main.OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
   const event: TksBroadcastingEvent);
 begin
@@ -319,11 +313,10 @@ begin
     ep.Family := 2;
     ep.SetAddress(Edt_Host.Text);
     ep.Port := StrToInt(Edt_Port.Text);
-    Protocol.Register(ep, 'Delphi demo', Edt_ConnPwd.Text, 500,
+    Protocol.Start(ep, 'Delphi demo', Edt_ConnPwd.Text, 500,
       Edt_CommandPwd.Text);
     Memo_Log.Lines.Add('Registration request sent to ' + Edt_Host.Text + ':' +
       Edt_Port.Text);
-    Timer_activityCheck.Interval := Protocol.UpdateIntervalMs * 7;
 
   except
     on E: Exception do
@@ -345,9 +338,8 @@ end;
 procedure TForm_main.Btn_DisconnectClick(Sender: TObject);
 begin
   try
-    Protocol.Unregister;
+    Protocol.Stop;
     Memo_Log.Lines.Add('Unregistration requested');
-    Timer_activityCheck.Enabled := false;
     AI_Receiving.Animate := false;
   except
     on E: Exception do
@@ -446,6 +438,8 @@ begin
   Protocol.OnSessionData := OnSessionDataUpdate;
   Protocol.OnTrackData := OnTrackData;
   Protocol.OnBroadcastingEvent := OnBroadcastingEvent;
+  Protocol.OnServerInactivity := OnServerInactivity;
+  Protocol.MaxServerInactivityMs := 30000; // half a minute
   Memo_Log.Lines.Clear;
   Panel_connection.Enabled := true;
   Btn_DefConnFieldClick(nil);

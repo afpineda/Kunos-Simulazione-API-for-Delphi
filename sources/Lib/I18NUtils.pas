@@ -31,7 +31,7 @@ unit I18NUtils;
   - Derive a translation class from TI18NTranslator for each language.
   For example:
 
-  type TSpanishTranslator = class(T18NTranslator) ...
+  type TSpanishTranslator = class(TI18NTranslator) ...
 
   - Add an "initialization" section to every translation unit and call
   "I18NUtils.RegisterClass(<<your_translation_class>>)".

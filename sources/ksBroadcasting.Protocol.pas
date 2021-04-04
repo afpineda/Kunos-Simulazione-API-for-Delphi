@@ -22,6 +22,8 @@ unit ksBroadcasting.Protocol;
 
   [2021-03-28] First implementation
 
+  [2021-04-03] Reworked
+
   ******************************************************* }
 
 interface
@@ -35,7 +37,7 @@ uses
   ksBroadcasting;
 
 type
-  TksBroadcastingProtocol = class(TksBroadcastingMsgHandler)
+  TksBroadcastingProtocol = class(TksThreadedBroadcastingMsgHandler)
     {
       PURPOUSE:
       To implement a broadcasting client.
@@ -44,12 +46,13 @@ type
       - Create a message delegate (IksMessageDelegate)
       - Create TksBroadcastingProtocol instance.
       - Assign "On*" event handlers
-      - Call "Register"
+      - Call "Start"
 
       EVENTS:
-      Events are called at the main thread if synchronizedEvents was set to
-      true at instance creation. Otherwise, they are called at a separate
-      thread. Any object (not record) passed to an event handler should be
+      Event handlers are called at the main thread if synchronizedEvents
+      was set totrue at instance creation. Otherwise, they are
+      called at a separate thread.
+      Any object (not record) passed to an event handler should be
       destroyed if not used. Take care.
 
       "OnEntryList" may be called with EntryList=nil. This happens
@@ -76,6 +79,8 @@ type
       const sessionData: TKsSessionData) of object;
     TOnBroadcastingEventEvent = procedure(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent) of object;
+    TOnServerInactivity = procedure(Sender: TksBroadcastingProtocol;
+      var mustUnregister: boolean) of object;
   private
     FDoSync: boolean;
     FEntryList: TKsEntryList;
@@ -85,11 +90,10 @@ type
     FOnCarData: TOnCarDataEvent;
     FOnSessionData: TOnSessionDataEvent;
     FOnBroadcastingEvent: TOnBroadcastingEventEvent;
-    ongoing: TEvent;
+    FOnServerInactivity: TOnServerInactivity;
     expectedEntryCount: integer;
-    listener: ITask;
-    cancelListener: boolean;
   protected
+    procedure NotifyNoServerActivity; override;
     procedure Msg(const result: TKsRegistrationResult); overload; override;
     procedure Msg(const sessionData: TKsSessionData); overload; override;
     procedure Msg(const carData: TKsCarData); overload; override;
@@ -103,10 +107,6 @@ type
     destructor Destroy; override;
     procedure RequestFocusOnRaceNumber(const carRaceNumber: integer;
       const cameraSet: string = ''; const camera: string = ''); overload;
-    procedure Register(const displayName: string;
-      const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
-      const commandPassword: string = '');
-    procedure Unregister;
     property OnBroadcastingEvent: TOnBroadcastingEventEvent
       read FOnBroadcastingEvent write FOnBroadcastingEvent;
     property OnCarData: TOnCarDataEvent read FOnCarData write FOnCarData;
@@ -118,7 +118,8 @@ type
       write FOnSessionData;
     property OnTrackData: TOnTrackDataEvent read FOnTrackData
       write FOnTrackData;
-
+    property OnServerInactivity: TOnServerInactivity read FOnServerInactivity
+      write FOnServerInactivity;
   end;
 
 implementation
@@ -137,46 +138,39 @@ begin
   FOnCarData := nil;
   FOnSessionData := nil;
   FOnBroadcastingEvent := nil;
+  FOnServerInactivity := nil;
   FEntryList := TKsEntryList.Create;
   expectedEntryCount := 0;
-  cancelListener := false;
-  ongoing := TEvent.Create(nil, true, false, '');
-  listener := TTask.Create(
-    procedure
-    begin
-      while (not cancelListener) do
-        try
-          ongoing.WaitFor;
-          if (not cancelListener) then
-            ProcessMessage;
-        except
-        end;
-    end);
-  listener.Start;
 end;
 
 destructor TksBroadcastingProtocol.Destroy;
 begin
   inherited;
-  cancelListener := true;
-  ongoing.SetEvent;
-  listener.Wait;
   FEntryList.Free;
-  ongoing.Free;
 end;
 
-procedure TksBroadcastingProtocol.Register(const displayName: string;
-  const connectionPassword: string; const msUpdateInterval: Int32;
-  const commandPassword: string);
+procedure TksBroadcastingProtocol.NotifyNoServerActivity;
+var
+  mustUnregister: boolean;
 begin
-  inherited Register(displayName,connectionPassword,msUpdateInterval,commandPassword);
-  ongoing.SetEvent;
-end;
-
-procedure TksBroadcastingProtocol.Unregister;
-begin
- ongoing.ResetEvent;
- inherited Unregister;
+  if Assigned(FOnServerInactivity) then
+  begin
+    mustUnregister := true;
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnServerInactivity(self, mustUnregister);
+          if mustUnregister then
+            inherited;
+        end)
+    else
+    begin
+      FOnServerInactivity(self, mustUnregister);
+      if mustUnregister then
+        inherited;
+    end;
+  end;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const result: TKsRegistrationResult);
