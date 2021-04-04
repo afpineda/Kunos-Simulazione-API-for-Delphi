@@ -136,8 +136,8 @@
         <Manifest_File>(None)</Manifest_File>
         <UWP_DelphiLogo44>..\resources\film.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>..\resources\film.png</UWP_DelphiLogo150>
-        <VerInfo_Build>5</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.5;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Build>6</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.6;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
