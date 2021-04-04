@@ -38,7 +38,9 @@ type
   public const
     DISPLAY_NAME = 'AutoSaveReplay';
   public type
-    TState = (NotRegistered, Waiting, InProgress);
+    TState = (Inactive, Waiting, InProgress);
+    TRegistrationRejectedEvent = procedure(sender: TObject; const msg: string)
+      of object;
   private
     FState: TState;
     FDelegate: TksUDPDelegate;
@@ -50,23 +52,27 @@ type
     FAutosaveSessionTime: Single;
     FOnSaveReplayEvent: TNotifyEvent;
     FOnStateChangeEvent: TNotifyEvent;
+    FOnRegistrationRejectedEvent: TRegistrationRejectedEvent;
     FSaveOnEndOfSession: boolean;
     FConnectionEndPoint: TNetEndPoint;
   protected
     procedure doOnSaveReplay;
     procedure doOnStateChange;
-    procedure Msg(const result: TKsRegistrationResult); overload; override;
-    procedure Msg(const sessionData: TKsSessionData); overload; override;
-    procedure Msg(const carData: TKsCarData); overload; override;
-    procedure Msg(const carInfo: TKsCarInfo); overload; override;
-    procedure Msg(const carEntryCount: integer); overload; override;
-    procedure Msg(const trackData: TksTrackData); overload; override;
-    procedure Msg(const event: TksBroadcastingEvent); overload; override;
+    procedure msg(const result: TKsRegistrationResult); overload; override;
+    procedure msg(const sessionData: TKsSessionData); overload; override;
+    procedure msg(const carData: TKsCarData); overload; override;
+    procedure msg(const carInfo: TKsCarInfo); overload; override;
+    procedure msg(const carEntryCount: integer); overload; override;
+    procedure msg(const trackData: TksTrackData); overload; override;
+    procedure msg(const event: TksBroadcastingEvent); overload; override;
     procedure BeforeRegister; override;
     procedure AfterUnregister; override;
+    procedure NotifyNoServerActivity; override;
   public
     constructor Create;
     procedure Start(Port: integer; const connectionPwd: string);
+    property OnRegistrationRejected: TRegistrationRejectedEvent
+      read FOnRegistrationRejectedEvent write FOnRegistrationRejectedEvent;
     property OnSaveReplay: TNotifyEvent read FOnSaveReplayEvent
       write FOnSaveReplayEvent;
     property OnStateChangeEvent: TNotifyEvent read FOnStateChangeEvent
@@ -92,9 +98,10 @@ constructor TAutosaveReplayProtocol.Create;
 begin
   FDelegate := TksUDPDelegate.Create;
   inherited Create(FDelegate);
-  FState := NotRegistered;
+  FState := Inactive;
   FOnSaveReplayEvent := nil;
   FOnStateChangeEvent := nil;
+  FOnRegistrationRejectedEvent := nil;
   FConnectionEndPoint.Family := 2;
 {$IFDEF DEBUG}
   FConnectionEndPoint.SetAddress('192.168.1.160');
@@ -109,6 +116,7 @@ procedure TAutosaveReplayProtocol.Start(Port: integer;
 begin
   FConnectionEndPoint.Port := Port;
   inherited Start(DISPLAY_NAME, connectionPwd);
+  inherited MaxServerInactivityMs := UpdateIntervalMs * 5;
 end;
 
 procedure TAutosaveReplayProtocol.BeforeRegister;
@@ -118,30 +126,38 @@ end;
 
 procedure TAutosaveReplayProtocol.AfterUnregister;
 begin
-  FState := NotRegistered;
+  FState := Inactive;
   doOnStateChange;
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const result: TKsRegistrationResult);
+procedure TAutosaveReplayProtocol.msg(const result: TKsRegistrationResult);
 begin
-  if (result.Success) then
+  if (not result.success) and Assigned(FOnRegistrationRejectedEvent) then
+  begin
+    TThread.Synchronize(nil,
+      procedure
+      begin
+        FOnRegistrationRejectedEvent(self, result.ErrorMessage)
+      end);
+  end
+  else if (FState <> Waiting) then
   begin
     FState := Waiting;
     doOnStateChange;
   end;
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const carEntryCount: integer);
+procedure TAutosaveReplayProtocol.msg(const carEntryCount: integer);
 begin
   // do nothing
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const carInfo: TKsCarInfo);
+procedure TAutosaveReplayProtocol.msg(const carInfo: TKsCarInfo);
 begin
   carInfo.Free;
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const trackData: TksTrackData);
+procedure TAutosaveReplayProtocol.msg(const trackData: TksTrackData);
 begin
   trackData.Free;
 end;
@@ -152,7 +168,7 @@ begin
   result := (result + 1) * interval;
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const sessionData: TKsSessionData);
+procedure TAutosaveReplayProtocol.msg(const sessionData: TKsSessionData);
 var
   mustSave: boolean;
 begin
@@ -188,6 +204,7 @@ begin
         begin
           mustSave := FSaveOnEndOfSession;
           FState := TState.Waiting;
+          doOnStateChange;
         end
         else if (FLiveSessionPhase = TksSessionPhase.Session) then
         begin
@@ -205,12 +222,12 @@ begin
   end;
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const carData: TKsCarData);
+procedure TAutosaveReplayProtocol.msg(const carData: TKsCarData);
 begin
   // do nothing
 end;
 
-procedure TAutosaveReplayProtocol.Msg(const event: TksBroadcastingEvent);
+procedure TAutosaveReplayProtocol.msg(const event: TksBroadcastingEvent);
 begin
   // do nothing
 end;
@@ -233,6 +250,11 @@ begin
       begin
         FOnStateChangeEvent(self);
       end);
+end;
+
+procedure TAutosaveReplayProtocol.NotifyNoServerActivity;
+begin
+  AfterUnregister;
 end;
 
 end.

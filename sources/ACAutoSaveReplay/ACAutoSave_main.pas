@@ -65,6 +65,7 @@ type
     procedure SetStatusBar(const txt: string); inline;
     procedure OnSaveReplay(Sender: TObject);
     procedure OnStateChange(Sender: TObject);
+    procedure OnRejected(Sender: TObject; const msg: string);
   public
     { Public declarations }
   end;
@@ -77,7 +78,7 @@ implementation
 uses
   ksBroadcasting.Data,
   ACAutoSave_processes,
-  ACAutoSave_strings;
+  ACAutoSave_strings, I18NUtils;
 
 {$R *.dfm}
 // ---- AUXILIARY
@@ -217,8 +218,11 @@ end;
 
 procedure TForm_main.FormCreate(Sender: TObject);
 begin
+  I18NUtils.Translate(self);
   Protocol := TAutosaveReplayProtocol.Create;
   Protocol.OnSaveReplay := OnSaveReplay;
+  Protocol.OnStateChangeEvent := OnStateChange;
+  Protocol.OnRegistrationRejected := OnRejected;
   Memo_log.Lines.Clear;
   SB_main.Panels[0].Text := str_error;
   Menu_disable.Checked := false;
@@ -262,7 +266,7 @@ begin
     status := str_disable_warning
   else
     case Protocol.State of
-      NotRegistered:
+      Inactive:
         status := str_state_notRegistered;
       Waiting:
         status := str_state_waiting;
@@ -272,6 +276,17 @@ begin
         end;
     end;
   SetStatusBar(status);
+end;
+
+procedure TForm_main.OnRejected(Sender: TObject; const msg: string);
+begin
+  // NOTE: should not happen
+  Protocol.Stop;
+  Log(str_line);
+  Log(str_error);
+  Log(str_rejected);
+  Log(msg);
+  SetStatusBar(str_error);
 end;
 
 // ---- Menu
@@ -314,20 +329,16 @@ procedure TForm_main.Menu_ShowStateClick(Sender: TObject);
 begin
   Log(str_line);
   case Protocol.State of
-    NotRegistered:
+    Inactive:
       begin
         Log(str_state_notRegistered);
       end;
-    Waiting:
-      begin
-        Log(str_state_waiting);
-      end;
-    InProgress:
-      begin
-        Log(FormatSessionTime(Protocol.LiveSessionTime));
-        Log(FormatSessionType(Protocol.LiveSessionType));
-        Log(FormatSessionPhase(Protocol.LiveSessionPhase));
-      end;
+  else
+    begin
+      Log(FormatSessionTime(Protocol.LiveSessionTime));
+      Log(FormatSessionType(Protocol.LiveSessionType));
+      Log(FormatSessionPhase(Protocol.LiveSessionPhase));
+    end;
   end;
 end;
 

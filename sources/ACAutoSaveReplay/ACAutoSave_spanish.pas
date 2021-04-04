@@ -74,6 +74,7 @@ begin
   str_phase_pre := 'preliminares';
   str_phase_race := 'carrera en curso';
   str_phase_post := 'carrera finalizada';
+  str_rejected := 'Registro UDP rechazado';
 end;
 
 class procedure TSpanishTranslator.TranslateObject(Instance: TObject);

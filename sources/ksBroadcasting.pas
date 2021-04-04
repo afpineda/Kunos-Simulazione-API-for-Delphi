@@ -24,6 +24,10 @@ unit ksBroadcasting;
 
   [2021-04-03] Added TksThreadedBroadcastingMsgHandler
 
+  [2021-04-04] New behaviour of registration task. Will
+  retry registration both in case of no response
+  to previous message and server inactivity.
+
   ******************************************************* }
 
 interface
@@ -115,8 +119,8 @@ type
     procedure Msg(const event: TksBroadcastingEvent); overload;
       virtual; abstract;
     function Register(const displayName: string;
-      const connectionPassword: string; const msUpdateInterval: Int32 = 1000;
-      const commandPassword: string = ''): boolean;
+      const connectionPassword: string; msUpdateInterval: Int32 = 1000;
+      const commandPassword: string = ''; force: boolean = false): boolean;
     function Unregister: boolean;
     property connectionId: Int32 read FConnectionID;
     property MessageDelegate: IksMessageDelegate read FMessageDelegate;
@@ -154,6 +158,12 @@ type
       until attended (succesful or not) or "Stop" is called.
       If already registered to any server, "Stop" is called previously.
 
+      SERVER INACTIVITY:
+      Configured at property "MaxServerInactivityMs".
+      In case of inactivity (after start), "NotifyNoServerActivity" is 
+      called just once. Then, a registration request is sent 
+      at regular intervals.
+      
       STOP:
       If registered, send an unregistration request.
       In not registered, cancel any pending registration request.
@@ -362,7 +372,7 @@ begin
     (MillisecondsBetween(Now, FRegReqTimestamp) >= (4 * UpdateIntervalMs));
 end;
 
-function TksBroadcastingMsgHandler.IsServerInactive(timeMs: Int64): boolean;{
+function TksBroadcastingMsgHandler.IsServerInactive(timeMs: Int64): boolean; {
   PURPOUSE:
   Check if server has been inactive (no message received) in the given amount
   of time.
@@ -375,6 +385,8 @@ function TksBroadcastingMsgHandler.IsServerInactive(timeMs: Int64): boolean;{
   False otherwise.
 }
 begin
+  if (timeMs < FUpdateInterval) then
+    timeMs := FUpdateInterval + 1;
   result := (FConnectionID >= 0) and
     (MillisecondsBetween(Now, FMsgTimestamp) >= timeMs);
 end;
@@ -382,8 +394,8 @@ end;
 // ---- OUTBOUND MESSAGES
 
 function TksBroadcastingMsgHandler.Register(const displayName: string;
-  const connectionPassword: string; const msUpdateInterval: Int32;
-  const commandPassword: string): boolean;
+  const connectionPassword: string; msUpdateInterval: Int32;
+  const commandPassword: string; force: boolean): boolean;
 {
   PURPOUSE:
   To send a registration message.
@@ -401,9 +413,11 @@ const
 var
   outStrm: TBytesStream;
 begin
-  result := (FConnectionID < 0);
+  result := (FConnectionID < 0) or force;
   if (result) then
   begin
+    if (msUpdateInterval < 50) then
+      msUpdateInterval := 50;
     outStrm := TBytesStream.Create;
     try
       FMessageDelegate.Start;
@@ -632,20 +646,25 @@ begin
 end;
 
 procedure TksThreadedBroadcastingMsgHandler.RegistrationTask;
+var
+  isInactive: boolean;
 begin
   repeat
     try
       ongoing.WaitFor;
-      if (not cancelBackgroundTasks) and RegistrationRequestTimedOut then
+      if (not cancelBackgroundTasks) then
       begin
-        RetryRegistrationRequest;
-        sleep(UpdateIntervalMs * 3);
-      end
-      else if (not cancelBackgroundTasks) and serverActivityFlag and
-        IsServerInactive(FMaxServerInactivityMs) then
-      begin
-        serverActivityFlag := false;
-        NotifyNoServerActivity;
+        isInactive := IsServerInactive(FMaxServerInactivityMs);
+        if serverActivityFlag and isInactive then
+        begin
+          serverActivityFlag := false;
+          NotifyNoServerActivity;
+        end;
+        if isInactive or RegistrationRequestTimedOut then
+        begin
+          RetryRegistrationRequest;
+          sleep(UpdateIntervalMs * 3);
+        end;
       end;
     except
     end;
@@ -692,7 +711,7 @@ end;
 procedure TksThreadedBroadcastingMsgHandler.RetryRegistrationRequest;
 begin
   inherited Register(FDisplayName, FConnectionPassword, UpdateIntervalMs,
-    FCommandPassword);
+    FCommandPassword, true);
 end;
 
 procedure TksThreadedBroadcastingMsgHandler.NotifyNoServerActivity;

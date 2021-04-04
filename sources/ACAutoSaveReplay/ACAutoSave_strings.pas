@@ -56,6 +56,7 @@ var
   str_phase_pre: string = 'preliminars';
   str_phase_race: string = 'race in progress';
   str_phase_post: string = 'race over';
+  str_rejected: string = 'UDP registration rejected';
 
 implementation
 

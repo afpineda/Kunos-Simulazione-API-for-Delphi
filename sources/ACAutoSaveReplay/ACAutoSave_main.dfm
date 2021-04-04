@@ -38,7 +38,6 @@ object Form_main: TForm_main
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 0
-    ExplicitHeight = 139
   end
   object SB_main: TStatusBar
     Left = 0
@@ -51,7 +50,6 @@ object Form_main: TForm_main
         Text = 'status'
         Width = 450
       end>
-    ExplicitTop = 191
   end
   object Menu_main: TMainMenu
     Left = 212
