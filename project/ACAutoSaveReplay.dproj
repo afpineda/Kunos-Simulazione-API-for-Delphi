@@ -5,7 +5,7 @@
         <FrameworkType>VCL</FrameworkType>
         <MainSource>ACAutoSaveReplay.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
         <TargetedPlatforms>2</TargetedPlatforms>
         <AppType>Application</AppType>
@@ -113,10 +113,10 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
         <Icon_MainIcon>..\resources\ACAutoSaveReplay.ico</Icon_MainIcon>
-        <VerInfo_Build>13</VerInfo_Build>
+        <VerInfo_Build>15</VerInfo_Build>
         <UWP_DelphiLogo44>..\resources\film.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>..\resources\film.png</UWP_DelphiLogo150>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.13;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.15;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -136,8 +136,8 @@
         <Manifest_File>(None)</Manifest_File>
         <UWP_DelphiLogo44>..\resources\film.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>..\resources\film.png</UWP_DelphiLogo150>
-        <VerInfo_Build>13</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.13;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Build>20</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.20;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -158,6 +158,7 @@
         <DCCReference Include="..\sources\ACAutoSaveReplay\ACAutoSave_processes.pas"/>
         <DCCReference Include="..\sources\Lib\I18NUtils.pas"/>
         <DCCReference Include="..\sources\ACAutoSaveReplay\ACAutoSave_spanish.pas"/>
+        <DCCReference Include="..\sources\ACAutoSaveReplay\ACCkeyboard.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

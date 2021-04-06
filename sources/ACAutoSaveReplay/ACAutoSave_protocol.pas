@@ -58,13 +58,13 @@ type
   protected
     procedure doOnSaveReplay;
     procedure doOnStateChange;
-    procedure msg(const result: TKsRegistrationResult); overload; override;
-    procedure msg(const sessionData: TKsSessionData); overload; override;
-    procedure msg(const carData: TKsCarData); overload; override;
-    procedure msg(const carInfo: TKsCarInfo); overload; override;
-    procedure msg(const carEntryCount: integer); overload; override;
-    procedure msg(const trackData: TksTrackData); overload; override;
-    procedure msg(const event: TksBroadcastingEvent); overload; override;
+    procedure Msg(const result: TKsRegistrationResult); overload; override;
+    procedure Msg(const sessionData: TKsSessionData); overload; override;
+    procedure Msg(const carData: TKsCarData); overload; override;
+    procedure Msg(const carInfo: TKsCarInfo); overload; override;
+    procedure Msg(const carEntryCount: integer); overload; override;
+    procedure Msg(const trackData: TksTrackData); overload; override;
+    procedure Msg(const event: TksBroadcastingEvent); overload; override;
     procedure BeforeRegister; override;
     procedure AfterUnregister; override;
     procedure NotifyNoServerActivity; override;

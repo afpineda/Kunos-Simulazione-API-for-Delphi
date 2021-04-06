@@ -13,7 +13,8 @@ uses
   ACAutoSave_strings in '..\sources\ACAutoSaveReplay\ACAutoSave_strings.pas',
   ACAutoSave_processes in '..\sources\ACAutoSaveReplay\ACAutoSave_processes.pas',
   I18NUtils in '..\sources\Lib\I18NUtils.pas',
-  ACAutoSave_spanish in '..\sources\ACAutoSaveReplay\ACAutoSave_spanish.pas';
+  ACAutoSave_spanish in '..\sources\ACAutoSaveReplay\ACAutoSave_spanish.pas',
+  ACCkeyboard in '..\sources\ACAutoSaveReplay\ACCkeyboard.pas';
 
 {$R *.res}
 

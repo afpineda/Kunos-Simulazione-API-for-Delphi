@@ -22,6 +22,9 @@ unit ACAutoSave_main;
 
   [2021-04-04] First implementation
 
+  [2021-04-06] Added support for any configured
+  key to save replay
+
   ******************************************************* }
 
 interface
@@ -29,6 +32,7 @@ interface
 uses
   ACAutoSave_protocol,
   ACCConfigFiles,
+  ACCkeyboard,
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
@@ -58,6 +62,8 @@ type
     Protocol: TAutosaveReplayProtocol;
     brdcastCfg: TBroadcastingJson;
     replayCfg: TReplayJson;
+    saveReplayKey: TSaveReplayControlCfg;
+    saveKeyInput: TInputArray;
     procedure LaunchProtocol;
     procedure LoadGameConfig;
     procedure OnLaunchFailure;
@@ -132,6 +138,8 @@ begin
 end;
 
 procedure TForm_main.LoadGameConfig;
+var
+  straux: string;
 begin
   Log(str_line);
   Log(str_readingGameCfg);
@@ -148,6 +156,32 @@ begin
   Log(str_ok);
   Log(Format(str_replay_cfg_values, [replayCfg.maxTimeReplaySeconds,
     integer(replayCfg.autoSaveEnabled)]));
+
+  Log(str_line);
+  Log('controls.json');
+  saveReplayKey := GetSaveReplayControlCfg;
+  saveKeyInput := GetInputArray(saveReplayKey);
+  Log(str_ok);
+  if saveReplayKey.available then
+  begin
+    straux := saveReplayKey.key;
+    if saveReplayKey.bCtrl then
+      straux := 'Ctrl+' + straux;
+    if saveReplayKey.bAlt then
+      straux := 'Alt+' + straux;
+    if saveReplayKey.bShift then
+      straux := 'Shift+' + straux;
+    // NOTE: Current implementation does not work when sending key modifiers
+    // Sent input is correct, however ACC does not seem to accept it
+{$IFNDEF DEBUG}
+    if saveReplayKey.bCtrl or saveReplayKey.bAlt or saveReplayKey.bShift then
+      raise Exception.CreateFmt(str_unsupportedKey_error, [straux])
+    else
+{$ENDIF}
+      Log(str_key_literal + straux);
+  end
+  else
+    Log(str_defaultKey);
 end;
 
 procedure TForm_main.OnLaunchFailure;
@@ -226,6 +260,7 @@ begin
   Memo_log.Lines.Clear;
   SB_main.Panels[0].Text := str_error;
   Menu_disable.Checked := false;
+  SetLength(saveKeyInput, 0);
 {$IFDEF DEBUG}
   Log('***** DEBUG VERSION *****');
 {$ENDIF}
@@ -251,10 +286,13 @@ begin
   end
   else
   begin
-    if (AutosaveReplay) then
+    if SendInputToACC(saveKeyInput) then
       Log(str_ok)
     else
+    begin
       Log(str_error);
+      Beep;
+    end;
   end;
 end;
 

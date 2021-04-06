@@ -22,6 +22,9 @@ unit ACCConfigFiles;
 
   [2021-04-04] First implementation
 
+  [2021-04-06] Added support for any configured
+  key to save replay
+
   ******************************************************* }
 
 interface
@@ -37,8 +40,17 @@ type
     autoSaveEnabled: boolean;
   end;
 
+  TSaveReplayControlCfg = record
+    available: boolean;
+    key: string;
+    bShift: boolean;
+    bCtrl: boolean;
+    bAlt: boolean;
+  end;
+
 function GetBroadcastingCfg: TBroadcastingJson;
 function GetReplayCfg: TReplayJson;
+function GetSaveReplayControlCfg: TSaveReplayControlCfg;
 
 implementation
 
@@ -47,11 +59,13 @@ uses
   WinFolders,
   System.IOUtils,
   System.SysUtils,
+  System.Generics.Collections,
   System.JSON;
 
 const
   BROADCASTING_PATH = 'Assetto Corsa Competizione\Config\broadcasting.json';
   REPLAY_PATH = 'Assetto Corsa Competizione\Config\replay.json';
+  CONTROLS_PATH = 'Assetto Corsa Competizione\Config\controls.json';
 
 function GetJSON(const filename: string): TJSONValue;
 var
@@ -109,6 +123,71 @@ begin
     Result.autoSaveEnabled := ((item as TJSONNumber).AsInt > 0)
   else
     Result.autoSaveEnabled := false;
+end;
+
+function GetSaveReplayControlCfg: TSaveReplayControlCfg;
+var
+  root, item: TJSONValue;
+  jsonarray: TJSONArray;
+  jsonobj: TJsonObject;
+  jsonstr: TJSONString;
+  filename: string;
+  i: integer;
+begin
+  Result.available := false;
+  filename := IncludeTrailingPathDelimiter(TWindowsFolder.myDocuments) +
+    CONTROLS_PATH;
+  root := GetJSON(filename);
+  item := root.FindValue('keyboardSettings.raceCommandButtonList');
+  if (item <> nil) and (item is TJSONArray) then
+  begin
+    jsonarray := (item as TJSONArray);
+    for i := 0 to jsonarray.Count - 1 do
+      if (jsonarray.Items[i] is TJsonObject) then
+      begin
+        jsonobj := (jsonarray.Items[i] as TJsonObject);
+        item := jsonobj.GetValue('actionType');
+        if (item = nil) then
+          continue;
+        jsonstr := (item as TJSONString);
+        if (jsonstr.Value = 'SaveReplay') then
+        begin
+          item := jsonobj.GetValue('key');
+          if (item <> nil) and (item is TJsonObject) then
+          begin
+            jsonobj := item as TJsonObject;
+            item := jsonobj.FindValue('key');
+            if item <> nil then
+              Result.key := item.AsType<TJSONString>.Value
+            else
+              raise Exception.Create(str_jsonFieldNotFound + ': key');
+            item := jsonobj.FindValue('bShift');
+            if item <> nil then
+              Result.bShift := item.AsType<TJSONBool>.AsBoolean
+            else
+              raise Exception.Create(str_jsonFieldNotFound + ': bShift');
+            item := jsonobj.FindValue('bCtrl');
+            if item <> nil then
+              Result.bCtrl := item.AsType<TJSONBool>.AsBoolean
+            else
+              raise Exception.Create(str_jsonFieldNotFound + ': bCtrl');
+            item := jsonobj.FindValue('bAlt');
+            if item <> nil then
+              Result.bAlt := item.AsType<TJSONBool>.AsBoolean
+            else
+              raise Exception.Create(str_jsonFieldNotFound + ': bAlt');
+            Result.available := true;
+            Exit;
+            item := jsonobj.FindValue('bCmd');
+            if (item <> nil) and item.AsType<TJSONBool>.AsBoolean then
+              raise Exception.CreateFmt(str_unsupportedKey_error,
+                ['bCmd modifier']);
+            Result.available := true;
+            Exit;
+          end;
+        end;
+      end;
+  end;
 end;
 
 end.

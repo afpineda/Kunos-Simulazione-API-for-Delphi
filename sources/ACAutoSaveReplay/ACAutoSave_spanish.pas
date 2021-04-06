@@ -22,6 +22,9 @@ unit ACAutoSave_spanish;
 
   [2021-04-04] First implementation
 
+  [2021-04-06] Added support for any configured
+  key to save replay
+
   ******************************************************* }
 
 interface
@@ -56,7 +59,8 @@ begin
   str_error := 'Error';
   str_ok := 'Ok';
   str_broadcast_cfg_values := 'Puerto UDP: %d';
-  str_replay_cfg_values := 'Tiempo máx. repetición: %d segundos, autosalvado: %d';
+  str_replay_cfg_values :=
+    'Tiempo máx. repetición: %d segundos, autosalvado: %d';
   str_start_protocol := 'Iniciando protocolo de retransmisión';
   str_state_notRegistered := 'Inactivo';
   str_state_waiting := 'Esperando comienzo de carrera/clasificación';
@@ -67,7 +71,8 @@ begin
   str_copyright_notice2 := 'Patrocinado por JJ Endurance Series';
   str_disable_warning := 'DESHABILITADO. Sin autosalvado';
   str_enable_warning := 'HABILITADO';
-  str_smallAutoReplay := 'El tiempo máx. de repetición es demasiado bajo. Deshabilitando.';
+  str_smallAutoReplay :=
+    'El tiempo máx. de repetición es demasiado bajo. Deshabilitando.';
   str_session_race := 'Sesión de carrera';
   str_session_qualy := 'Sesión clasificatoria';
   str_session_other := 'No es sesión de carrera/clasificatoria';
@@ -75,6 +80,9 @@ begin
   str_phase_race := 'carrera en curso';
   str_phase_post := 'carrera finalizada';
   str_rejected := 'Registro UDP rechazado';
+  str_key_literal := 'Tecla: ';
+  str_defaultKey := 'Usando tecla por defecto ("M")';
+  str_unsupportedKey_error := 'Tecla no soportada: "%s"';
 end;
 
 class procedure TSpanishTranslator.TranslateObject(Instance: TObject);

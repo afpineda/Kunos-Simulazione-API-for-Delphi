@@ -57,6 +57,9 @@ var
   str_phase_race: string = 'race in progress';
   str_phase_post: string = 'race over';
   str_rejected: string = 'UDP registration rejected';
+  str_key_literal: string ='Key: ';
+  str_defaultKey: string = 'Using default key "M"';
+  str_unsupportedKey_error: string = 'Unsupported key: "%s"';
 
 implementation
 

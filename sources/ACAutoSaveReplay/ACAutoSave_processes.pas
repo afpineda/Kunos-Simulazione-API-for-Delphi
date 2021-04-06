@@ -22,15 +22,20 @@ unit ACAutoSave_processes;
 
   [2021-04-04] First implementation
 
+  [2021-04-06] Added support for any configured
+  key to save replay
+
   ******************************************************* }
 
 interface
 
 uses
+  ACCKeyboard,
+  ACCConfigFiles,
   system.SysUtils,
   WinApi.Windows;
 
-function AutosaveReplay: boolean;
+function SendInputToACC(const input: TInputArray): boolean;
 function IsACCRunning: boolean;
 
 implementation
@@ -122,24 +127,17 @@ begin
   Result := 0;
 end;
 
-function SendInputToExe(const ExeName: string; vkey: DWORD): boolean;
+function SendInputToExe(const ExeName: string; const input: TInputArray): boolean;
 var
   Handle: HWND;
-  inp: array [0 .. 1] of TInput;
 begin
   Result := false;
   Handle := FindWindowHandle(TPath.GetFileName(ExeName));
-  if (Handle <> 0) then
+  if (Handle <> 0) and (Length(input) > 0) then
   begin
-    inp[0].Itype := 1;
-    inp[0].ki.wVk := vkey;
-    inp[0].ki.wScan := 0;
-    inp[0].ki.dwFlags := 0;
-    inp[1] := inp[0];
-    inp[1].ki.dwFlags := KEYEVENTF_KEYUP;
-
     SetForegroundWindow(Handle);
-    Result := SendInput(Length(inp), inp[0], sizeof(TInput)) = Length(inp);
+    Result := SendInput(Length(input), input[0], sizeof(TInput))
+      = Length(input);
   end;
 end;
 
@@ -148,9 +146,13 @@ begin
   Result := FindWindowHandle(ACC_EXE) <> 0;
 end;
 
-function AutosaveReplay: boolean;
+function SendInputToACC(const input: TInputArray): boolean;
 begin
-  Result := SendInputToExe(ACC_EXE,LOWORD(VkKeyScan('m')));
+{$IFDEF DEBUG}
+  Result := SendInputToExe('notepad.exe',input);
+{$ELSE}
+  Result := SendInputToExe(ACC_EXE,input);
+{$ENDIF}
 end;
 
 end.
