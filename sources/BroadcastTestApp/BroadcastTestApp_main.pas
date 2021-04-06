@@ -105,8 +105,7 @@ type
       trackData: TksTrackData);
     procedure OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent);
-    procedure OnServerInactivity(Sender: TksBroadcastingProtocol;
-      var quit: boolean);
+    procedure OnServerInactivity(Sender: TObject);
 
     procedure PlotCar(const carData: TKsCarData);
   public
@@ -145,11 +144,9 @@ begin
   AI_Receiving.Animate := result.success;
 end;
 
-procedure TForm_main.OnServerInactivity(Sender: TksBroadcastingProtocol;
-  var quit: boolean);
+procedure TForm_main.OnServerInactivity(Sender: TObject);
 begin
   Memo_Log.Lines.Add('Server is inactive');
-  quit := false;
 end;
 
 procedure TForm_main.OnEntryList(Sender: TksBroadcastingProtocol;
