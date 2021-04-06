@@ -76,7 +76,7 @@ var
 begin
   data := TFile.ReadAllBytes(filename);
   l := TEncoding.GetBufferEncoding(data, encoding);
-  if (l = 0) and (char(data[1]) = #0) then
+  if (l = 0) and (length(data)>1) and (char(data[1]) = #0) then
     // UTF-16 encoding without BOM
     text := TEncoding.Unicode.GetString(data)
   else

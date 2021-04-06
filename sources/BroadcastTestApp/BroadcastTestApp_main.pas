@@ -243,7 +243,9 @@ begin
   with VE_Session.Strings do
   begin
     Add('Session Time=' + sessionData.SessionTime.ToString);
-    Add('Remaining Time=' + sessionData.RemainingTime.ToString);
+    Add('Session Remaining Time=' + sessionData.SessionRemainingTime.ToString);
+    Add('Session End Time=' + sessionData.SessionEndTime.ToString);
+    Add('"end your lap" remaining time=' + sessionData.RemainingTime.ToString);
     Add('Rain Level=' + sessionData.RainLevel.ToString);
     Add('Clouds=' + sessionData.Clouds.ToString);
     Add('Wetness=' + sessionData.Wetness.ToString);
@@ -256,6 +258,7 @@ begin
     Add('Track temp=' + sessionData.TrackTemp.ToString);
     Add('Event Index=' + sessionData.EventIndex.ToString);
     Add('Session Index=' + sessionData.SessionIndex.ToString);
+    Add('Type=' + Byte(sessionData.SessionType).ToString);
     Add('Phase=' + Byte(sessionData.Phase).ToString);
   end;
 end;
