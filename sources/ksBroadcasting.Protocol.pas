@@ -50,7 +50,7 @@ type
 
       EVENTS:
       Event handlers are called at the main thread if synchronizedEvents
-      was set totrue at instance creation. Otherwise, they are
+      was set to true at instance creation. Otherwise, they are
       called at a separate thread.
       Any object (not record) passed to an event handler should be
       destroyed if not used. Take care.
@@ -79,8 +79,6 @@ type
       const sessionData: TKsSessionData) of object;
     TOnBroadcastingEventEvent = procedure(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent) of object;
-    TOnServerInactivity = procedure(Sender: TksBroadcastingProtocol;
-      var mustUnregister: boolean) of object;
   private
     FDoSync: boolean;
     FEntryList: TKsEntryList;
@@ -90,7 +88,7 @@ type
     FOnCarData: TOnCarDataEvent;
     FOnSessionData: TOnSessionDataEvent;
     FOnBroadcastingEvent: TOnBroadcastingEventEvent;
-    FOnServerInactivity: TOnServerInactivity;
+    FOnServerInactivity: TNotifyEvent;
     expectedEntryCount: integer;
   protected
     procedure NotifyNoServerActivity; override;
@@ -118,7 +116,7 @@ type
       write FOnSessionData;
     property OnTrackData: TOnTrackDataEvent read FOnTrackData
       write FOnTrackData;
-    property OnServerInactivity: TOnServerInactivity read FOnServerInactivity
+    property OnServerInactivity: TNotifyEvent read FOnServerInactivity
       write FOnServerInactivity;
   end;
 
@@ -150,25 +148,18 @@ begin
 end;
 
 procedure TksBroadcastingProtocol.NotifyNoServerActivity;
-var
-  mustUnregister: boolean;
 begin
   if Assigned(FOnServerInactivity) then
   begin
-    mustUnregister := true;
     if FDoSync then
       TThread.Synchronize(nil,
         procedure
         begin
-          FOnServerInactivity(self, mustUnregister);
-          if mustUnregister then
-            inherited;
+          FOnServerInactivity(self);
         end)
     else
     begin
-      FOnServerInactivity(self, mustUnregister);
-      if mustUnregister then
-        inherited;
+      FOnServerInactivity(self);
     end;
   end;
 end;
