@@ -35,6 +35,7 @@ uses
   System.Generics.Collections,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.Grids, Vcl.ValEdit,
+  ksBroadcasting.Leaderboard,
   ksBroadcasting.Protocol,
   ksBroadcasting.UDP,
   ksBroadcasting.Data, Vcl.WinXCtrls;
@@ -106,6 +107,8 @@ type
     procedure OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent);
     procedure OnServerInactivity(Sender: TObject);
+    procedure OnLeaderboard(Sender: TksBroadcastingProtocol;
+      Leaderboard: TksLeaderboard);
 
     procedure PlotCar(const carData: TKsCarData);
   public
@@ -153,6 +156,7 @@ procedure TForm_main.OnEntryList(Sender: TksBroadcastingProtocol;
   NewList: TksEntryList);
 var
   i, j, rc: Integer;
+  carInfo: TKsCarInfo;
 begin
   Grid_carEntries.RowCount := 1;
   Grid_carEntries.ColCount := 3;
@@ -171,23 +175,25 @@ begin
     Grid_carEntries.RowCount := NewList.Count + 1;
     Grid_carEntries.FixedRows := 1;
     Memo_Log.Lines.Add('Entry list received');
-    for i := 0 to NewList.Count - 1 do
+    i := 0;
+    for carInfo in NewList.Values do
     begin
-      Grid_carEntries.Cells[0, i + 1] := NewList.Items[i].RaceNumber.ToString;
-      Grid_carEntries.Cells[1, i + 1] := NewList.Items[i].TeamName;
-      Grid_carEntries.Cells[2, i + 1] := NewList[i].Drivers
-        [NewList.Items[i].CurrentDriverIndex].ShortName;
-      for j := 0 to NewList[i].Drivers.Count - 1 do
+      Grid_carEntries.Cells[0, i + 1] := carInfo.RaceNumber.ToString;
+      Grid_carEntries.Cells[1, i + 1] := carInfo.TeamName;
+      Grid_carEntries.Cells[2, i + 1] := carInfo.Drivers
+        [carInfo.CurrentDriverIndex].ShortName;
+      for j := 0 to carInfo.Drivers.Count - 1 do
       begin
         Grid_drivers.RowCount := Grid_drivers.RowCount + 1;
         rc := Grid_drivers.RowCount - 1;
-        Grid_drivers.Cells[0, rc] := NewList.Items[i].RaceNumber.ToString;
-        Grid_drivers.Cells[1, rc] := NewList.Items[i].TeamName;
-        Grid_drivers.Cells[2, rc] := NewList[i].Drivers[j].FirstName + ' ' +
-          NewList[i].Drivers[j].LastName;
-        Grid_drivers.Cells[3, rc] := NewList[i].Drivers[j].ShortName;
+        Grid_drivers.Cells[0, rc] := carInfo.ToString;
+        Grid_drivers.Cells[1, rc] := carInfo.TeamName;
+        Grid_drivers.Cells[2, rc] := carInfo.Drivers[j].FirstName + ' ' +
+          carInfo.Drivers[j].LastName;
+        Grid_drivers.Cells[3, rc] := carInfo.Drivers[j].ShortName;
       end;
       Grid_drivers.FixedRows := 1;
+      inc(i);
     end;
   end
   else
@@ -195,7 +201,6 @@ begin
     Memo_Log.Lines.Add('Entry list cleared');
     List_CarData.Items.Clear;
   end;
-
   NewList.Free;
 end;
 
@@ -294,6 +299,34 @@ begin
   Memo_Log.Lines.Add(Format('EVENT: %s /CARIDX: %d /MS: %d / TYPE: %d',
     [event.messageText, event.carIndex, event.TimeMS,
     Integer(event.eventType)]));
+end;
+
+procedure TForm_main.OnLeaderboard(Sender: TksBroadcastingProtocol;
+  Leaderboard: TksLeaderboard);
+var
+  item: TListItem;
+  i: Integer;
+begin
+  try
+    List_CarData.Clear;
+    for i := 0 to Leaderboard.Count - 1 do
+    begin
+      item := List_CarData.Items.Add;
+      item.Caption := Leaderboard.GetField(i, RaceNumber);
+      item.SubItems.Add(Leaderboard.GetField(i, driverShortName));
+      item.SubItems.Add(Leaderboard.GetField(i, bestTime));
+      item.SubItems.Add(Leaderboard.GetField(i, lastTime));
+      item.SubItems.Add(Leaderboard.GetField(i, currentTime));
+      item.SubItems.Add(Leaderboard.GetField(i, officialPos));
+      item.SubItems.Add(Leaderboard.GetField(i, TrackPos));
+      item.SubItems.Add(Leaderboard.GetField(i,
+        TksLeaderboard.TField.CarLocation));
+      item.SubItems.Add(Leaderboard.GetField(i, TksLeaderboard.TField.Laps));
+    end;
+
+  finally
+    Leaderboard.Free;
+  end;
 end;
 
 // ----------------------------------------------------------------------------
@@ -434,7 +467,8 @@ begin
   Protocol := TksUDPv4BroadcastingProtocol.Create;
   Protocol.OnRegistration := OnConnection;
   Protocol.OnEntryList := OnEntryList;
-  Protocol.OnCarData := OnCarDataUpdate;
+  // Protocol.OnCarData := OnCarDataUpdate;
+  Protocol.OnLeaderboardUpdate := OnLeaderboard;
   Protocol.OnSessionData := OnSessionDataUpdate;
   Protocol.OnTrackData := OnTrackData;
   Protocol.OnBroadcastingEvent := OnBroadcastingEvent;

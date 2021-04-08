@@ -6,7 +6,8 @@ uses
   ksBroadcasting in '..\sources\ksBroadcasting.pas',
   ksBroadcasting.Data in '..\sources\ksBroadcasting.Data.pas',
   ksBroadcasting.UDP in '..\sources\ksBroadcasting.UDP.pas',
-  ksBroadcasting.Protocol in '..\sources\ksBroadcasting.Protocol.pas';
+  ksBroadcasting.Protocol in '..\sources\ksBroadcasting.Protocol.pas',
+  ksBroadcasting.Leaderboard in '..\sources\ksBroadcasting.Leaderboard.pas';
 
 {$R *.res}
 

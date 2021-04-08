@@ -23,11 +23,15 @@ object Form_main: TForm_main
     Top = 0
     Width = 602
     Height = 371
-    ActivePage = Page_TrackData
+    ActivePage = Page_CarData
     Align = alClient
     TabOrder = 0
     object Page_Connect: TTabSheet
       Caption = 'Connection'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Panel_connection: TPanel
         Left = 0
         Top = 0
@@ -161,23 +165,25 @@ object Form_main: TForm_main
     object Page_carEntries: TTabSheet
       Caption = 'Entries'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Lbl_drivers: TLabel
         Left = 0
         Top = 167
-        Width = 594
+        Width = 34
         Height = 13
         Align = alTop
         Caption = 'Drivers'
-        ExplicitWidth = 34
       end
       object Lbl_cars: TLabel
         Left = 0
         Top = 0
-        Width = 594
+        Width = 22
         Height = 13
         Align = alTop
         Caption = 'Cars'
-        ExplicitWidth = 22
       end
       object Splitter1: TSplitter
         Left = 0
@@ -218,6 +224,10 @@ object Form_main: TForm_main
     object Page_CarData: TTabSheet
       Caption = 'Car'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object List_CarData: TListView
         Left = 0
         Top = 0
@@ -226,36 +236,36 @@ object Form_main: TForm_main
         Align = alClient
         Columns = <
           item
-            Caption = 'Car Idx'
+            Caption = 'RaceNum'
           end
           item
-            Caption = 'Driver Idx'
+            Caption = 'Driver'
             Width = 70
           end
           item
-            Caption = 'X'
+            Caption = 'best'
           end
           item
-            Caption = 'Y'
+            Caption = 'last'
           end
           item
-            Caption = 'Official pos'
+            Caption = 'current'
             Width = 70
           end
           item
-            Caption = 'Track pos'
+            Caption = 'Pos'
             Width = 60
           end
           item
-            Caption = 'Lap pos'
+            Caption = 'track pos'
             Width = 60
           end
           item
-            Caption = 'Lap count'
+            Caption = 'Loc'
             Width = 70
           end
           item
-            Caption = 'Last lap time'
+            Caption = '--'
             Width = 110
           end>
         ReadOnly = True
@@ -267,6 +277,10 @@ object Form_main: TForm_main
     object Page_SessionData: TTabSheet
       Caption = 'Session'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object VE_Session: TValueListEditor
         Left = 0
         Top = 0
@@ -277,12 +291,16 @@ object Form_main: TForm_main
         TabOrder = 0
         ColWidths = (
           150
-          150)
+          438)
       end
     end
     object Page_TrackData: TTabSheet
       Caption = 'Track'
       ImageIndex = 4
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Lbl_Hud: TLabel
         Left = 0
         Top = 74
@@ -394,6 +412,10 @@ object Form_main: TForm_main
     object Page_Plotter: TTabSheet
       Caption = 'Plotter'
       ImageIndex = 5
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object PB_Plotter: TPaintBox
         Left = 0
         Top = 48

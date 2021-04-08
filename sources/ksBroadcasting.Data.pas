@@ -139,13 +139,16 @@ type
   end;
 
 type
-  TksEntryList = class(TObjectList<TksCarInfo>)
+  TksEntryList = class(TDictionary<integer, TksCarInfo>)
   public
-    constructor Create;
-    function Duplicate: TksEntryList;
+    constructor Create; overload;
+    constructor Create(source: TksEntryList); overload;
+    destructor Destroy; override;
+//    function Duplicate: TksEntryList;
     function findIndex(const carIndex: UInt16): TksCarInfo;
     function findRaceNumber(const raceNumber: integer): TksCarInfo;
-    procedure Sort;
+    procedure Clear;
+    // procedure Sort;
   end;
 
 type
@@ -181,10 +184,24 @@ type
     CupPosition: UInt16;
     DriverCount: BYTE;
     procedure readFromStream(const strm: TStream);
+    function RacePositionValue: Int64;
+    function QualifyPositionValue: Int64;
   end;
 
 type
+  TksCarDataList = TDictionary<integer, TksCarData>;
+
+type
   TksSessionData = record
+    { NOTES after observation:
+      - SessionTime: Elapsed session time counting from race/session start
+      - RemainingTime:  no meaning ?
+      - SessionEndTime: Remaining time to checkered flag (countdown) or
+      end of session
+      - SessionRemainingTime: no meaning ?
+      - EventIndex: allways zero ?
+      - SessionIndex: first session is zero, then increases on each new session.
+    }
     EventIndex: UInt16;
     SessionIndex: UInt16;
     Phase: TksSessionPhase;
@@ -196,8 +213,8 @@ type
     Wetness: Single;
     BestSessionLap: TksLapInfo;
     // NOTE: Included in kunos api, but not used anywhere
-//    BestLapCarIndex: SmallInt;
-//    BestLapDriverIndex: SmallInt;
+    // BestLapCarIndex: SmallInt;
+    // BestLapDriverIndex: SmallInt;
     FocusedCarIndex: Int32;
     ActiveCameraSet: string;
     ActiveCamera: string;
@@ -237,7 +254,7 @@ type
     eventType: TksBroadcastingEventType;
     messageText: string;
     TimeMS: integer;
-    CarIndex: integer;
+    carIndex: integer;
     procedure readFromStream(const strm: TStream);
   end;
 
@@ -317,6 +334,19 @@ begin
   BestSessionLap.readFromStream(strm);
   LastLap.readFromStream(strm);
   CurrentLap.readFromStream(strm);
+end;
+
+function TksCarData.RacePositionValue: Int64;
+begin
+  Result := Laps + Trunc(SplinePosition * 10000.0);
+end;
+
+function TksCarData.QualifyPositionValue: Int64;
+begin
+  if (BestSessionLap.IsValidForBest) then
+    Result := High(Int64) - BestSessionLap.LaptimeMS
+  else
+    Result := 0;
 end;
 
 // ----------------------------------------------------------------------------
@@ -448,55 +478,91 @@ end;
 
 constructor TksEntryList.Create;
 begin
-  inherited Create(true);
+  inherited Create;
 end;
 
-function TksEntryList.Duplicate;
+constructor TksEntryList.Create(source: TksEntryList);
 var
-  i: integer;
+  item: TPair<integer, TksCarInfo>;
 begin
-  Result := TksEntryList.Create;
-  for i := 0 to Count - 1 do
-    Result.Add(TksCarInfo.Create(Items[i]));
+  inherited Create;
+  for item in source do
+    Add(item.key, TksCarInfo.Create(item.value));
 end;
 
-procedure TksEntryList.Sort;
-var
-  Comparison: TComparison<TksCarInfo>;
+destructor TksEntryList.Destroy;
 begin
-  Comparison := function(const Left, Right: TksCarInfo): integer
-    begin
-      Result := Left.FCarIndex - Right.FCarIndex;
-    end;
-  inherited Sort(TComparer<TksCarInfo>.Construct(Comparison));
+  Clear;
+  inherited;
 end;
+
+//function TksEntryList.Duplicate;
+//var
+//  item: TksCarInfo;
+//begin
+//  Result := TksEntryList.Create;
+//  for item in Values do
+//    Result.Add(item.carIndex, TksCarInfo.Create(item));
+//end;
+
+// procedure TksEntryList.Sort;
+// var
+// Comparison: TComparison<TksCarInfo>;
+// begin
+// Comparison := function(const Left, Right: TksCarInfo): integer
+// begin
+// Result := Left.FCarIndex - Right.FCarIndex;
+// end;
+// inherited Sort(TComparer<TksCarInfo>.Construct(Comparison));
+// end;
 
 function TksEntryList.findIndex(const carIndex: UInt16): TksCarInfo;
-var
-  i: integer;
 begin
-  Result := nil;
-  i := 0;
-  while (Result = nil) and (i < Count) and (Items[i].carIndex <= carIndex) do
-  begin
-    if (Items[i].carIndex = carIndex) then
-      Result := Items[i];
-    inc(i);
-  end;
+  // Result := nil;
+  // i := 0;
+  // while (Result = nil) and (i < Count) and (Items[i].carIndex <= carIndex) do
+  // begin
+  // if (Items[i].carIndex = carIndex) then
+  // Result := Items[i];
+  // inc(i);
+  // end;
+  if self.ContainsKey(carIndex) then
+    Result := self.Items[carIndex]
+  else
+    Result := nil;
 end;
 
 function TksEntryList.findRaceNumber(const raceNumber: integer): TksCarInfo;
+// var
+// i: integer;
+// begin
+// Result := nil;
+// i := 0;
+// while (Result = nil) and (i < Count) do
+// begin
+// if (Items[i].raceNumber = raceNumber) then
+// Result := Items[i];
+// inc(i);
+// end;
 var
-  i: integer;
+  item: TksCarInfo;
 begin
+  for item in Values do
+    if (item.raceNumber = raceNumber) then
+    begin
+      Result := item;
+      Exit;
+    end;
   Result := nil;
-  i := 0;
-  while (Result = nil) and (i < Count) do
-  begin
-    if (Items[i].raceNumber = raceNumber) then
-      Result := Items[i];
-    inc(i);
-  end;
+end;
+
+procedure TksEntryList.Clear;
+var
+  item: TksCarInfo;
+begin
+  for item in Values do
+    item.Free;
+  inherited Clear;
 end;
 
 
@@ -601,7 +667,7 @@ begin
   strm.ReadBuffer(eventType, sizeof(eventType));
   messageText := ReadString(strm);
   strm.ReadBuffer(TimeMS, sizeof(TimeMS));
-  strm.ReadBuffer(CarIndex, sizeof(CarIndex));
+  strm.ReadBuffer(carIndex, sizeof(carIndex));
 end;
 
 end.
