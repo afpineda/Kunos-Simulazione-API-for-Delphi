@@ -25,6 +25,8 @@ unit ACAutoSave_main;
   [2021-04-06] Added support for any configured
   key to save replay
 
+  [2021-04-08] Added autoload of config files when changed
+
   ******************************************************* }
 
 interface
@@ -33,6 +35,7 @@ uses
   ACAutoSave_protocol,
   ACCConfigFiles,
   ACCkeyboard,
+  ACCConfigWatcher,
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
@@ -51,6 +54,7 @@ type
     Menu_saveNow: TMenuItem;
     Menu_Checks: TMenuItem;
     Menu_ShowState: TMenuItem;
+    Menu_reload: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure Menu_AboutClick(Sender: TObject);
@@ -58,17 +62,20 @@ type
     procedure Menu_disableClick(Sender: TObject);
     procedure Menu_saveNowClick(Sender: TObject);
     procedure Menu_ShowStateClick(Sender: TObject);
+    procedure Menu_reloadClick(Sender: TObject);
   private
     Protocol: TAutosaveReplayProtocol;
     brdcastCfg: TBroadcastingJson;
     replayCfg: TReplayJson;
     saveReplayKey: TSaveReplayControlCfg;
     saveKeyInput: TInputArray;
+    configWatcher: TACCConfigWatcher;
     procedure LaunchProtocol;
     procedure LoadGameConfig;
-    procedure OnLaunchFailure;
     procedure Log(const txt: string); inline;
     procedure SetStatusBar(const txt: string); inline;
+    procedure OnLaunchFailure;
+    procedure OnConfigChange(Sender: TObject);
     procedure OnSaveReplay(Sender: TObject);
     procedure OnStateChange(Sender: TObject);
     procedure OnRejected(Sender: TObject; const msg: string);
@@ -188,6 +195,7 @@ procedure TForm_main.OnLaunchFailure;
 begin
   SetStatusBar(str_error);
   Menu_Action.Enabled := false;
+  Protocol.Stop;
 end;
 
 procedure TForm_main.LaunchProtocol;
@@ -210,6 +218,7 @@ begin
     else
       Log(str_ok);
     OnStateChange(Protocol);
+
   except
     on E: Exception do
     begin
@@ -261,6 +270,9 @@ begin
   SB_main.Panels[0].Text := str_error;
   Menu_disable.Checked := false;
   SetLength(saveKeyInput, 0);
+  configWatcher := TACCConfigWatcher.Create(true);
+  configWatcher.OnChange := OnConfigChange;
+  configWatcher.Start;
 {$IFDEF DEBUG}
   Log('***** DEBUG VERSION *****');
 {$ENDIF}
@@ -269,6 +281,7 @@ end;
 
 procedure TForm_main.FormDestroy(Sender: TObject);
 begin
+  configWatcher.Kill;
   Protocol.Free;
 end;
 
@@ -278,8 +291,9 @@ procedure TForm_main.OnSaveReplay(Sender: TObject);
 begin
   Log(str_line);
   Log(str_autosaving);
-  if Protocol.State = InProgress then
-    Log(FormatSessionTime(Protocol.LiveSessionTime));
+  Log(FormatSessionType(Protocol.LiveSessionType));
+  Log(FormatSessionPhase(Protocol.LiveSessionPhase));
+  Log(FormatSessionTime(Protocol.LiveSessionTime));
   if (Menu_disable.Checked) then
   begin
     Log(str_disable_warning);
@@ -378,6 +392,26 @@ begin
       Log(FormatSessionPhase(Protocol.LiveSessionPhase));
     end;
   end;
+end;
+
+procedure TForm_main.Menu_reloadClick(Sender: TObject);
+begin
+  OnConfigChange(nil);
+end;
+
+// ---- CONfIG WATCHER
+
+procedure TForm_main.OnConfigChange(Sender: TObject);
+begin
+  try
+    LoadGameConfig;
+  except
+    on E: Exception do
+    begin
+      Log(str_error + ': ' + E.Message);
+      OnLaunchFailure;
+    end;
+  end
 end;
 
 end.

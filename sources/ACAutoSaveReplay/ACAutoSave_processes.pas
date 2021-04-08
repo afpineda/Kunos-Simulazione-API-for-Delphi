@@ -4,7 +4,7 @@ unit ACAutoSave_processes;
 
   Auto save replay for AC/ACC
 
-  Sends the "save replay" key to ACC at regular intervals
+  Sends the "save replay" key to ACC
 
   *******************************************************
 
@@ -127,7 +127,8 @@ begin
   Result := 0;
 end;
 
-function SendInputToExe(const ExeName: string; const input: TInputArray): boolean;
+function SendInputToExe(const ExeName: string;
+  const input: TInputArray): boolean;
 var
   Handle: HWND;
 begin
@@ -149,10 +150,12 @@ end;
 function SendInputToACC(const input: TInputArray): boolean;
 begin
 {$IFDEF DEBUG}
-  Result := SendInputToExe('notepad.exe',input);
+  Result := SendInputToExe('notepad.exe', input);
 {$ELSE}
-  Result := SendInputToExe(ACC_EXE,input);
+  Result := SendInputToExe(ACC_EXE, input);
 {$ENDIF}
 end;
+
+
 
 end.

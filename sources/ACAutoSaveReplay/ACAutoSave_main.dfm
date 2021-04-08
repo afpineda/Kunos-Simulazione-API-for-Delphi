@@ -77,6 +77,10 @@ object Form_main: TForm_main
           Caption = 'Show session state'
           OnClick = Menu_ShowStateClick
         end
+        object Menu_reload: TMenuItem
+          Caption = 'Reload config files'
+          OnClick = Menu_reloadClick
+        end
       end
     end
     object Menu_About: TMenuItem

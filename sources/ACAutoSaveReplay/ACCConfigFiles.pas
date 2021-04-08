@@ -4,7 +4,7 @@ unit ACCConfigFiles;
 
   Auto save replay for AC/ACC
 
-  Sends the "save replay" key to ACC at regular intervals
+  Read ACC's configuration files
 
   *******************************************************
 
@@ -22,8 +22,10 @@ unit ACCConfigFiles;
 
   [2021-04-04] First implementation
 
-  [2021-04-06] Added support for any configured
+  [2021-04-06] Added support for (almost) any configured
   key to save replay
+
+  [2021-04-08] Added autoload of config files when changed
 
   ******************************************************* }
 
@@ -48,9 +50,11 @@ type
     bAlt: boolean;
   end;
 
+function GetACCConfigPath: string;
 function GetBroadcastingCfg: TBroadcastingJson;
 function GetReplayCfg: TReplayJson;
 function GetSaveReplayControlCfg: TSaveReplayControlCfg;
+function IsACCConfigFile(const filename: string): boolean;
 
 implementation
 
@@ -63,9 +67,13 @@ uses
   System.JSON;
 
 const
-  BROADCASTING_PATH = 'Assetto Corsa Competizione\Config\broadcasting.json';
-  REPLAY_PATH = 'Assetto Corsa Competizione\Config\replay.json';
-  CONTROLS_PATH = 'Assetto Corsa Competizione\Config\controls.json';
+  CFG_FOLDER_PATH = 'Assetto Corsa Competizione\Config';
+  BROADCASTING_FILE = 'broadcasting.json';
+  REPLAY_FILE = 'replay.json';
+  CONTROLS_FILE = 'controls.json';
+  BROADCASTING_PATH = CFG_FOLDER_PATH + '\' + BROADCASTING_FILE;
+  REPLAY_PATH = CFG_FOLDER_PATH + '\' + REPLAY_FILE;
+  CONTROLS_PATH = CFG_FOLDER_PATH + '\' + CONTROLS_FILE;
 
 function GetJSON(const filename: string): TJSONValue;
 var
@@ -83,6 +91,19 @@ begin
     // Use BOM
     text := encoding.GetString(data, l, Length(data) - l);
   Result := TJsonObject.ParseJSONValue(text, false, true);
+end;
+
+function GetACCConfigPath: string;
+begin
+  Result := IncludeTrailingPathDelimiter(TWindowsFolder.myDocuments) +
+    CFG_FOLDER_PATH;
+end;
+
+function IsACCConfigFile(const filename: string): boolean;
+begin
+  Result := (CompareText(filename, BROADCASTING_FILE) = 0) or
+    (CompareText(filename, CONTROLS_FILE) = 0) or
+    (CompareText(filename, REPLAY_FILE) = 0)
 end;
 
 function GetBroadcastingCfg: TBroadcastingJson;

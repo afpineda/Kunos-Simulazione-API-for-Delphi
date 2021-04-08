@@ -3,7 +3,7 @@ unit ACCkeyboard;
 
   Auto save replay for AC/ACC
 
-  Sends the "save replay" key to ACC at regular intervals
+  Compute keystrokes in order to send input to ACC
 
   *******************************************************
 

@@ -487,7 +487,7 @@ end;
 
 function TksEntryList.findRaceNumber(const raceNumber: integer): TksCarInfo;
 var
-  i: integer;
+    i: integer;
 begin
   Result := nil;
   i := 0;

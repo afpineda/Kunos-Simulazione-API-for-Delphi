@@ -4,7 +4,7 @@ unit ACAutoSave_spanish;
 
   Auto save replay for AC/ACC
 
-  Sends the "save replay" key to ACC at regular intervals
+  Spanish translation
 
   *******************************************************
 
@@ -24,6 +24,8 @@ unit ACAutoSave_spanish;
 
   [2021-04-06] Added support for any configured
   key to save replay
+
+  [2021-04-08] Added autoload of config files when changed
 
   ******************************************************* }
 
@@ -97,6 +99,7 @@ begin
       Menu_saveNow.Caption := 'Salvar repetición ahora (para probar)';
       Menu_ShowState.Caption := 'Mostrar estado de la sesión';
       Menu_About.Caption := 'Acerca de';
+      Menu_reload.Caption := 'Recargar ficheros de configuración';
       Caption := 'Autosalvar repetición';
     end;
 end;

@@ -3,7 +3,7 @@ unit ACAutoSave_strings;
 
   Auto save replay for AC/ACC
 
-  Sends the "save replay" key to ACC at regular intervals
+  Strings
 
   *******************************************************
 
