@@ -103,6 +103,7 @@ begin
   FOnStateChangeEvent := nil;
   FOnRegistrationRejectedEvent := nil;
   FConnectionEndPoint.Family := 2;
+  FSaveOnEndOfSession := true;
 {$IFDEF DEBUG}
   FConnectionEndPoint.SetAddress('192.168.1.160');
 {$ELSE}

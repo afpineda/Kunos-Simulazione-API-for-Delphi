@@ -178,7 +178,7 @@ begin
       straux := 'Alt+' + straux;
     if saveReplayKey.bShift then
       straux := 'Shift+' + straux;
-    // NOTE: Current implementation does not work when sending key modifiers
+    // NOTE: Current implementation does not work when sending key modifiers.
     // Sent input is correct, however ACC does not seem to accept it
 {$IFNDEF DEBUG}
     if saveReplayKey.bCtrl or saveReplayKey.bAlt or saveReplayKey.bShift then
@@ -189,6 +189,11 @@ begin
   end
   else
     Log(str_defaultKey);
+      Protocol.SaveIntervalSeconds := replayCfg.maxTimeReplaySeconds -
+      ((Protocol.UpdateIntervalMs div 1000) * 4);
+    if (Protocol.SaveIntervalSeconds < 10) then
+      Protocol.SaveIntervalSeconds := 10;
+    Protocol.SaveOnEndOfSession := not replayCfg.autoSaveEnabled;
 end;
 
 procedure TForm_main.OnLaunchFailure;
@@ -204,21 +209,15 @@ begin
     LoadGameConfig;
     Log(str_line);
     Log(str_start_protocol);
-    Protocol.SaveIntervalSeconds := replayCfg.maxTimeReplaySeconds -
-      ((Protocol.UpdateIntervalMs div 1000) * 4);
-    if (Protocol.SaveIntervalSeconds < 10) then
-      Protocol.SaveIntervalSeconds := 10;
-    Protocol.SaveOnEndOfSession := not replayCfg.autoSaveEnabled;
     Protocol.Start(brdcastCfg.Port, brdcastCfg.connectionPassword);
     if (Protocol.SaveIntervalSeconds < 600) then
     begin
       Log(str_smallAutoReplay);
-      Menu_disable.Click;
+      Menu_disable.Checked := true;
     end
     else
       Log(str_ok);
     OnStateChange(Protocol);
-
   except
     on E: Exception do
     begin
@@ -404,7 +403,7 @@ end;
 procedure TForm_main.OnConfigChange(Sender: TObject);
 begin
   try
-    LoadGameConfig;
+    LaunchProtocol;
   except
     on E: Exception do
     begin
