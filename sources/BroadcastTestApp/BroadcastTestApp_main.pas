@@ -101,7 +101,7 @@ type
     procedure OnCarDataUpdate(Sender: TksBroadcastingProtocol;
       const carData: TKsCarData);
     procedure OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
-      const sessionData: TKsSessionData);
+      const sessionData,prev: TKsSessionData);
     procedure OnTrackData(Sender: TksBroadcastingProtocol;
       trackData: TksTrackData);
     procedure OnBroadcastingEvent(Sender: TksBroadcastingProtocol;
@@ -186,7 +186,7 @@ begin
       begin
         Grid_drivers.RowCount := Grid_drivers.RowCount + 1;
         rc := Grid_drivers.RowCount - 1;
-        Grid_drivers.Cells[0, rc] := carInfo.ToString;
+        Grid_drivers.Cells[0, rc] := carInfo.RaceNumber.ToString;
         Grid_drivers.Cells[1, rc] := carInfo.TeamName;
         Grid_drivers.Cells[2, rc] := carInfo.Drivers[j].FirstName + ' ' +
           carInfo.Drivers[j].LastName;
@@ -241,7 +241,7 @@ begin
 end;
 
 procedure TForm_main.OnSessionDataUpdate(Sender: TksBroadcastingProtocol;
-  const sessionData: TKsSessionData);
+  const sessionData,prev: TKsSessionData);
 begin
   // Memo_Log.Lines.Add('Session data updated');
   VE_Session.Strings.Clear;
@@ -250,7 +250,7 @@ begin
     Add('Session Time=' + sessionData.SessionTime.ToString);
     Add('Session Remaining Time=' + sessionData.SessionRemainingTime.ToString);
     Add('Session End Time=' + sessionData.SessionEndTime.ToString);
-    Add('"end your lap" remaining time=' + sessionData.RemainingTime.ToString);
+    Add('Remaining time=' + sessionData.RemainingTime.ToString);
     Add('Rain Level=' + sessionData.RainLevel.ToString);
     Add('Clouds=' + sessionData.Clouds.ToString);
     Add('Wetness=' + sessionData.Wetness.ToString);
@@ -266,6 +266,10 @@ begin
     Add('Type=' + Byte(sessionData.SessionType).ToString);
     Add('Phase=' + Byte(sessionData.Phase).ToString);
   end;
+  if (sessionData.SessionIndex<>prev.SessionIndex) then
+    Memo_Log.Lines.Add('NOTE: New session');
+  if (sessionData.Phase<>prev.Phase) then
+    Memo_Log.Lines.Add('NOTE: Next phase or session reset');
 end;
 
 procedure TForm_main.OnTrackData(Sender: TksBroadcastingProtocol;
@@ -315,13 +319,15 @@ begin
       item.Caption := Leaderboard.GetField(i, RaceNumber);
       item.SubItems.Add(Leaderboard.GetField(i, driverShortName));
       item.SubItems.Add(Leaderboard.GetField(i, bestTime));
+      item.SubItems.Add(Leaderboard.GetField(i, gapToBestLap));
       item.SubItems.Add(Leaderboard.GetField(i, lastTime));
       item.SubItems.Add(Leaderboard.GetField(i, currentTime));
       item.SubItems.Add(Leaderboard.GetField(i, officialPos));
       item.SubItems.Add(Leaderboard.GetField(i, TrackPos));
       item.SubItems.Add(Leaderboard.GetField(i,
         TksLeaderboard.TField.CarLocation));
-      item.SubItems.Add(Leaderboard.GetField(i, TksLeaderboard.TField.Laps));
+      item.SubItems.Add(Leaderboard.GetField(i, laps));
+      item.SubItems.Add(Leaderboard.GetField(i, gapToNextCar));
     end;
 
   finally

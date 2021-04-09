@@ -77,15 +77,17 @@ type
     TOnCarDataEvent = procedure(Sender: TksBroadcastingProtocol;
       const carInfo: TKsCarData) of object;
     TOnSessionDataEvent = procedure(Sender: TksBroadcastingProtocol;
-      const sessionData: TKsSessionData) of object;
+      const current, previous: TKsSessionData) of object;
     TOnBroadcastingEventEvent = procedure(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent) of object;
     TOnLeaderboardUpdateEvent = procedure(Sender: TksBroadcastingProtocol;
       Leaderboard: TksLeaderboard) of object;
   private
     FCurrentLeaderBoard: TksCarDataList;
+    FCurrentSessionData: TKsSessionData;
     FDoSync: boolean;
     FEntryList: TKsEntryList;
+    FLastLeaderboardCount: integer;
     FOnRegistration: TOnRegistrationEvent;
     FOnEntryList: TOnEntryListEvent;
     FOnTrackData: TOnTrackDataEvent;
@@ -151,6 +153,8 @@ begin
   FOnBroadcastingEvent := nil;
   FOnServerInactivity := nil;
   FOnLeaderboardUpdate := nil;
+  FCurrentSessionData.Reset;
+  FLastLeaderboardCount := 0;
 
   FEntryList := TKsEntryList.Create;
   expectedEntryCount := 0;
@@ -277,10 +281,11 @@ begin
       TThread.Synchronize(nil,
         procedure
         begin
-          FOnSessionData(self, sessionData);
+          FOnSessionData(self, sessionData, FCurrentSessionData);
         end)
     else
-      FOnSessionData(self, sessionData);
+      FOnSessionData(self, sessionData, FCurrentSessionData);
+  FCurrentSessionData := sessionData;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const carData: TKsCarData);
@@ -289,24 +294,28 @@ var
 begin
   if (expectedEntryCount = 0) then
   begin
-    if (Assigned(FOnCarData)) then
-      if FDoSync then
-        TThread.Synchronize(nil,
-          procedure
-          begin
-            FOnCarData(self, carData);
-          end)
-      else
-        FOnCarData(self, carData);
-
     carInfo := FEntryList.findIndex(carData.carIndex);
     if ((carInfo = nil) or (carInfo.Drivers.Count <> carData.DriverCount)) then
       RequestEntryList
     else
     begin
+      if (Assigned(FOnCarData)) then
+        if FDoSync then
+          TThread.Synchronize(nil,
+            procedure
+            begin
+              FOnCarData(self, carData);
+            end)
+        else
+          FOnCarData(self, carData);
+
       if (FCurrentLeaderBoard.ContainsKey(carData.carIndex)) then
       begin
         // Leaderboard completed
+        if (FLastLeaderboardCount > FCurrentLeaderBoard.Count) then
+          // someone left the server
+          RequestEntryList;
+        FLastLeaderboardCount := FCurrentLeaderBoard.Count;
         NotifyLeaderBoard;
         FCurrentLeaderBoard.Clear;
       end;
@@ -355,9 +364,8 @@ var
 begin
   if (Assigned(FOnLeaderboardUpdate)) then
   begin
-    lb := TksLeaderboard.Create(TksLeaderboard.TSortCriteria.leadership,
-      TKsEntryList.Create(FEntryList),
-      TksCarDataList.Create(FCurrentLeaderBoard));
+    lb := TksLeaderboard.Create(FEntryList, FCurrentLeaderBoard,
+      FCurrentSessionData);
     if FDoSync then
       TThread.Synchronize(nil,
         procedure
@@ -367,7 +375,6 @@ begin
     else
       FOnLeaderboardUpdate(self, lb);
   end;
-
 end;
 
 end.

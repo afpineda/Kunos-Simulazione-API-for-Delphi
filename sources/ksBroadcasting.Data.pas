@@ -102,7 +102,9 @@ type
     FShortName: string;
     FCategory: TksDriverCategory;
     FNationality: TksNationalityEnum;
+    function GetDisplayName: string;
   public
+    property DisplayName: string read GetDisplayName;
     property FirstName: string read FFirstName;
     property LastName: string read FLastName;
     property ShortName: string read FShortName;
@@ -144,11 +146,9 @@ type
     constructor Create; overload;
     constructor Create(source: TksEntryList); overload;
     destructor Destroy; override;
-//    function Duplicate: TksEntryList;
     function findIndex(const carIndex: UInt16): TksCarInfo;
     function findRaceNumber(const raceNumber: integer): TksCarInfo;
     procedure Clear;
-    // procedure Sort;
   end;
 
 type
@@ -165,6 +165,12 @@ type
 
 type
   TksCarData = record
+    { NOTES from observation:
+      - TrackPosition is allways zero
+      - WorldPosX,Y does not look like coordinates
+      - Yaw is useless
+      - Position: strict sequential numbering, 1-based.
+    }
     carIndex: UInt16;
     DriverIndex: UInt16;
     Gear: BYTE;
@@ -184,8 +190,6 @@ type
     CupPosition: UInt16;
     DriverCount: BYTE;
     procedure readFromStream(const strm: TStream);
-    function RacePositionValue: Int64;
-    function QualifyPositionValue: Int64;
   end;
 
 type
@@ -193,9 +197,9 @@ type
 
 type
   TksSessionData = record
-    { NOTES after observation:
+    { NOTES from observation:
       - SessionTime: Elapsed session time counting from race/session start
-      - RemainingTime:  no meaning ?
+      - RemainingTime:  allways zero, no meaning ?
       - SessionEndTime: Remaining time to checkered flag (countdown) or
       end of session
       - SessionRemainingTime: no meaning ?
@@ -228,6 +232,7 @@ type
     TrackTemp: BYTE;
     CurrentHudPage: string;
     procedure readFromStream(const strm: TStream);
+    procedure Reset;
   end;
 
 type
@@ -264,6 +269,7 @@ procedure WriteString(const strm: TStream; const str: string);
 implementation
 
 uses
+  StrUtils,
   System.Generics.Defaults,
   System.SysUtils;
 
@@ -336,19 +342,6 @@ begin
   CurrentLap.readFromStream(strm);
 end;
 
-function TksCarData.RacePositionValue: Int64;
-begin
-  Result := Laps + Trunc(SplinePosition * 10000.0);
-end;
-
-function TksCarData.QualifyPositionValue: Int64;
-begin
-  if (BestSessionLap.IsValidForBest) then
-    Result := High(Int64) - BestSessionLap.LaptimeMS
-  else
-    Result := 0;
-end;
-
 // ----------------------------------------------------------------------------
 // TksLapInfo
 // ----------------------------------------------------------------------------
@@ -407,6 +400,22 @@ begin
   FShortName := ReadString(strm);
   strm.ReadBuffer(FCategory, sizeof(FCategory));
   strm.ReadBuffer(FNationality, sizeof(FNationality));
+end;
+
+function TKsDriverInfo.GetDisplayName: string;
+var
+  lfn, lln: integer;
+begin
+  lfn := Length(FFirstName);
+  lln := Length(FLastName);
+  if (lfn > 0) and (lln > 0) then
+    Result := LeftStr(FFirstName, 1) + '. ' + FLastName
+  else if (lln > 0) then
+    Result := FLastName
+  else if (lfn > 0) then
+    Result := FFirstName
+  else
+    Result := FShortName;
 end;
 
 // ----------------------------------------------------------------------------
@@ -496,14 +505,14 @@ begin
   inherited;
 end;
 
-//function TksEntryList.Duplicate;
-//var
-//  item: TksCarInfo;
-//begin
-//  Result := TksEntryList.Create;
-//  for item in Values do
-//    Result.Add(item.carIndex, TksCarInfo.Create(item));
-//end;
+// function TksEntryList.Duplicate;
+// var
+// item: TksCarInfo;
+// begin
+// Result := TksEntryList.Create;
+// for item in Values do
+// Result.Add(item.carIndex, TksCarInfo.Create(item));
+// end;
 
 // procedure TksEntryList.Sort;
 // var
@@ -565,7 +574,6 @@ begin
   inherited Clear;
 end;
 
-
 // ----------------------------------------------------------------------------
 // TksSessionData
 // ----------------------------------------------------------------------------
@@ -601,6 +609,13 @@ begin
   strm.ReadBuffer(aux, sizeof(aux));
   Wetness := aux / 10.0;
   BestSessionLap.readFromStream(strm);
+end;
+
+procedure TksSessionData.Reset;
+begin
+  SessionIndex := HIGH(SessionIndex);
+  Phase := TksSessionPhase.NONE;
+  SessionType := TksRaceSessionType.Practice;
 end;
 
 // ----------------------------------------------------------------------------

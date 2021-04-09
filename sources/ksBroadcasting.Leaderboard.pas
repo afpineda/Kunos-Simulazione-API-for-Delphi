@@ -34,33 +34,33 @@ type
   public type
     TField = (driverFirstName, driverLastName, driverShortName,
       driverDisplayName, teamName, raceNumber, bestTime, lastTime, currentTime,
-      officialPos, trackPos, carLocation, laps);
-    TSortCriteria = (bestLap, leadership);
+      officialPos, trackPos, carLocation, laps, deltaToPersonalBestLap,
+      gapToNextCar, gapToBestLap);
   private
-    FEntryList: TksEntryList;
-    FCarDataList: TksCarDataList;
-    FSortIndex: TList<integer>;
-    procedure CreateSortIndex(sort: TSortCriteria);
+    FEntryList: array of TksCarInfo;
+    FCarDataList: array of TksCarData;
+    FSessionData: TksSessionData;
     function GetCount: integer;
-    function GetDriverDisplayName(const driver: TKsDriverInfo): string; inline;
-    function GetCarModel(index: integer): BYTE;
-    function GetCarLocation(index: integer): TksCarLocationEnum;
+    function GetCarInfo(index: integer): TksCarInfo;
+    function GetCarData(index: integer): TksCarData;
+    function GetSessionTime: string;
   public
-    constructor Create(sort: TSortCriteria; entryList: TksEntryList;
-      carDataList: TksCarDataList);
+    constructor Create(entryList: TksEntryList; carDataList: TksCarDataList;
+      const sessionData: TksSessionData);
     destructor Destroy; override;
+    function IndexOf(const carNumber: integer): integer;
     function GetField(index: integer; field: TField): string;
-    function GetFieldAsInteger(index: integer; field: TField): integer;
-    property CarModel[index: integer]: BYTE read GetCarModel;
-    property carLocation[index: integer]: TksCarLocationEnum
-      read GetCarLocation;
+    function GetRaceMeters(index: integer; trackMeters: integer): Int64;
+    property carData[index: integer]: TksCarData read GetCarData;
+    property carInfo[index: integer]: TksCarInfo read GetCarInfo;
     property Count: integer read GetCount;
-    // procedure Update(const entryList: TksEntryList); overload;
-    // procedure Update(const carData: TksCarData); overload;
+    property sessionData: TksSessionData read FSessionData;
+    property sessionTimeAsString: string read GetSessionTime;
   end;
 
-function LapTimeMsToStr(const timeMS: integer): string; overload;
-function SessionTimeMsToStr(const timeMS: single): string; overload;
+function LapTimeMsToStr(const timeMS: integer): string;
+function SessionTimeMsToStr(const timeMS: Single): string;
+function DeltaTimeMsToStr(const time1MS, time2MS: integer): string;
 
 implementation
 
@@ -84,7 +84,7 @@ begin
   end;
 end;
 
-function SessionTimeMsToStr(const timeMS: single): string;
+function SessionTimeMsToStr(const timeMS: Single): string;
 var
   timeMsInt64, seconds, minutes, hours: Int64;
 begin
@@ -100,78 +100,79 @@ begin
   end;
 end;
 
-constructor TksLeaderboard.Create(sort: TSortCriteria; entryList: TksEntryList;
-  carDataList: TksCarDataList);
+function DeltaTimeMsToStr(const time1MS, time2MS: integer): string;
+var
+  delta: integer;
+  millis, seconds, minutes: integer;
+  sign: string;
 begin
-  FEntryList := entryList;
-  FCarDataList := carDataList;
-  FSortIndex := TList<integer>.Create;
-  CreateSortIndex(sort);
+  if (time1MS < 0) or (time1MS >= 3600000) or (time2MS < 0) or
+    (time2MS >= 3600000) then
+    Result := '-.--'
+  else
+  begin
+    if (time1MS >= time2MS) then
+    begin
+      delta := time1MS - time2MS;
+      sign := '+'
+    end
+    else
+    begin
+      delta := time2MS - time1MS;
+      sign := '-'
+    end;
+    millis := delta mod 1000;
+    seconds := (delta div 1000) mod 60;
+    minutes := (delta div 60000) mod 60;
+
+    if (delta < 60000) then
+      Result := Format('%s%2d.%.3d', [sign, seconds, millis])
+    else
+      Result := Format('%s%.2d:%.2d', [sign, minutes, seconds])
+  end;
+end;
+
+constructor TksLeaderboard.Create(entryList: TksEntryList;
+  carDataList: TksCarDataList; const sessionData: TksSessionData);
+var
+  carDataPair: TPair<integer, TksCarData>;
+  carInfo: TksCarInfo;
+  i: integer;
+begin
+  FSessionData := sessionData;
+  SetLength(FEntryList, carDataList.Count);
+  SetLength(FCarDataList, carDataList.Count);
+  for carDataPair in carDataList do
+    if (carDataPair.Value.Position > 0) and
+      (carDataPair.Value.Position <= carDataList.Count) then
+    begin
+      i := carDataPair.Value.Position - 1;
+      FCarDataList[i] := carDataPair.Value;
+      carInfo := entryList.Items[carDataPair.Value.carIndex];
+      // if (carInfo<>nil) then
+      FEntryList[i] := TksCarInfo.Create(carInfo);
+      // else
+      // // should not happen
+      // FEntryList[i] := TksCarInfo.Create;
+    end;
 end;
 
 destructor TksLeaderboard.Destroy;
-begin
-  FEntryList.Free;
-  FCarDataList.Free;
-  FSortIndex.Free;
-end;
-
-procedure TksLeaderboard.CreateSortIndex(sort: TSortCriteria);
 var
-  // carData: TksCarData;
-  carInfo: TksCarInfo;
-  val1, val2: Int64;
-  i, j, aux: integer;
+  i: integer;
 begin
-  FSortIndex.Clear;
-  for carInfo in FEntryList.Values do
-    FSortIndex.Add(carInfo.carIndex);
-
-  for i := 0 to FSortIndex.Count - 1 do
-    for j := 0 to FSortIndex.Count - 1 do
-    begin
-      val1 := FCarDataList.Items[FSortIndex[i]].Position;
-      val2 := FCarDataList.Items[FSortIndex[j]].Position;
-      if (val1 < val2) then
-      begin
-        aux := FSortIndex[i];
-        FSortIndex[i] := FSortIndex[j];
-        FSortIndex[j] := aux;
-      end;
-    end;
-
-  // NOTE: BUGGED !!!
-  //
-  // FSortIndex.sort(TComparer<integer>.Construct(
-  // function(const a, b: integer): integer
-  // var
-  // aux: Int64;
-  // begin
-  // case sort of
-  // leadership:
-  // aux := FCarDataList.Items[b].RacePositionValue - FCarDataList.Items[a]
-  // .RacePositionValue;
-  // else
-  // aux := integer(FCarDataList.Items[b].QualifyPositionValue -
-  // FCarDataList.Items[a].QualifyPositionValue);
-  // end;
-  // if (aux >= 0) then
-  // Result := 1
-  // else
-  // Result := -1;
-  // end));
+  for i := Low(FEntryList) to High(FEntryList) do
+    FEntryList[i].Free;
 end;
 
 function TksLeaderboard.GetField(index: integer; field: TField): string;
 var
-  carId: integer;
-  carInfo: TksCarInfo;
+  carInfo: TKsCarInfo;
   driverIndex: integer;
   driverInfo: TKsDriverInfo;
 begin
-  carId := FSortIndex.Items[index];
-  driverIndex := FCarDataList.Items[carId].driverIndex;
-  carInfo := FEntryList.Items[carId];
+  driverIndex := FCarDataList[index].driverIndex;
+  carInfo := FEntryList[index];
   driverInfo := carInfo.Drivers.Items[driverIndex];
   case field of
     driverFirstName:
@@ -181,27 +182,26 @@ begin
     driverShortName:
       Result := driverInfo.ShortName;
     driverDisplayName:
-      Result := GetDriverDisplayName(driverInfo);
+      Result := driverInfo.DisplayName;
     teamName:
       if (Length(carInfo.teamName) = 0) then
-        Result := GetDriverDisplayName(driverInfo)
+        Result := driverInfo.DisplayName
       else
         Result := carInfo.teamName;
     raceNumber:
       Result := Format('%.3d', [carInfo.raceNumber]);
     bestTime:
-      Result := LapTimeMsToStr(FCarDataList.Items[carId]
-        .BestSessionLap.LaptimeMS);
+      Result := LapTimeMsToStr(FCarDataList[index].BestSessionLap.LaptimeMS);
     lastTime:
-      Result := LapTimeMsToStr(FCarDataList.Items[carId].LastLap.LaptimeMS);
+      Result := LapTimeMsToStr(FCarDataList[index].LastLap.LaptimeMS);
     currentTime:
-      Result := LapTimeMsToStr(FCarDataList.Items[carId].CurrentLap.LaptimeMS);
+      Result := LapTimeMsToStr(FCarDataList[index].CurrentLap.LaptimeMS);
     officialPos:
-      Result := Format('%.2d', [FCarDataList.Items[carId].Position]);
+      Result := Format('%.2d', [FCarDataList[index].Position]);
     trackPos:
-      Result := Format('%.2d', [FCarDataList.Items[carId].TrackPosition]);
+      Result := Format('%.2d', [FCarDataList[index].TrackPosition]);
     TField.carLocation:
-      case FCarDataList.Items[carId].carLocation of
+      case FCarDataList[index].carLocation of
         TksCarLocationEnum.NONE:
           Result := '?';
         TksCarLocationEnum.Track:
@@ -212,67 +212,73 @@ begin
         Result := 'p';
       end;
     laps:
-      Result := Format('%3d', [FCarDataList.Items[carId].laps]);
+      Result := Format('%3d', [FCarDataList[index].laps]);
+    deltaToPersonalBestLap:
+      Result := DeltaTimeMsToStr(FCarDataList[index].delta, 0);
+    gapToNextCar:
+      if (FSessionData.SessionType <> TksRaceSessionType.Race) then
+        Result := DeltaTimeMsToStr(FCarDataList[index].BestSessionLap.LaptimeMS,
+          FSessionData.BestSessionLap.LaptimeMS)
+      else if (index < Length(FCarDataList) - 1) then
+      begin
+        if (FCarDataList[index].laps > FCarDataList[index + 1].laps) then
+          Result := Format('+%d L',
+            [FCarDataList[index].laps - FCarDataList[index + 1].laps])
+        else if (FCarDataList[index].laps < FCarDataList[index + 1].laps) then
+          Result := Format('-%d L',
+            [FCarDataList[index + 1].laps - FCarDataList[index].laps])
+        else
+          Result := DeltaTimeMsToStr(FCarDataList[index].CurrentLap.LaptimeMS,
+            FCarDataList[index + 1].CurrentLap.LaptimeMS);
+      end
+      else
+        Result := '';
+    gapToBestLap:
+      Result := DeltaTimeMsToStr(FCarDataList[index].BestSessionLap.LaptimeMS,
+        FSessionData.BestSessionLap.LaptimeMS);
   else
     Result := '???';
   end;
 end;
 
-function TksLeaderboard.GetFieldAsInteger(index: integer;
-  field: TField): integer;
-var
-  carId: integer;
-  carInfo: TksCarInfo;
-  // driverIndex: integer;
-  // driverInfo: TKsDriverInfo;
-begin
-  carId := FSortIndex.Items[index];
-  carInfo := FEntryList.Items[carId];
-  case field of
-    raceNumber:
-      Result := carInfo.raceNumber;
-    bestTime:
-      Result := FCarDataList.Items[carId].BestSessionLap.LaptimeMS;
-    lastTime:
-      Result := FCarDataList.Items[carId].LastLap.LaptimeMS;
-    currentTime:
-      Result := FCarDataList.Items[carId].CurrentLap.LaptimeMS;
-    officialPos:
-      Result := FCarDataList.Items[carId].Position;
-    trackPos:
-      Result := FCarDataList.Items[carId].TrackPosition;
-    TField.carLocation:
-      Result := integer(FCarDataList.Items[carId].carLocation);
-  else
-    Result := 0;
-  end;
-end;
-
-function TksLeaderboard.GetDriverDisplayName(const driver
-  : TKsDriverInfo): string;
-begin
-  Result := LeftStr(driver.FirstName, 1) + '. ' + driver.LastName
-end;
-
 function TksLeaderboard.GetCount: integer;
 begin
-  Result := FSortIndex.Count;
+  Result := Length(FCarDataList);
 end;
 
-function TksLeaderboard.GetCarModel(index: integer): BYTE;
-var
-  carId: integer;
+function TksLeaderboard.GetCarInfo(index: integer): TksCarInfo;
 begin
-  carId := FSortIndex.Items[index];
-  Result := FEntryList.Items[carId].CarModelType;
+  Result := FEntryList[index];
 end;
 
-function TksLeaderboard.GetCarLocation(index: integer): TksCarLocationEnum;
-var
-  carId: integer;
+function TksLeaderboard.GetCarData(index: integer): TksCarData;
 begin
-  carId := FSortIndex.Items[index];
-  Result := FCarDataList.Items[carId].carLocation;
+  Result := FCarDataList[index];
+end;
+
+function TksLeaderboard.GetSessionTime: string;
+begin
+  Result := SessionTimeMsToStr(FSessionData.SessionTime);
+end;
+
+function TksLeaderboard.GetRaceMeters(index: integer;
+  trackMeters: integer): Int64;
+begin
+  Result := (FCarDataList[index].laps * trackMeters) +
+    Trunc(FCarDataList[index].SplinePosition * trackMeters);
+end;
+
+function TksLeaderboard.IndexOf(const carNumber: integer): integer;
+var
+  i: integer;
+begin
+  Result := -1;
+  i := 0;
+  while (Result < 0) and (i < Length(FCarDataList)) do
+    if (FEntryList[i].raceNumber = carNumber) then
+      Result := i
+    else
+      inc(i);
 end;
 
 end.
