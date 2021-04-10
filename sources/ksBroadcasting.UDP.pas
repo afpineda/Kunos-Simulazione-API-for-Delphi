@@ -24,6 +24,8 @@ unit ksBroadcasting.UDP;
 
   [2021-04-03] Reworked
 
+  [2021-04-10] Added "ACCEnpointOnThisComputer"
+
   ******************************************************* }
 
 interface
@@ -81,6 +83,8 @@ type
   protected
     procedure BeforeRegister; override;
   public
+    class procedure ACCEnpointOnThisComputer(out ep: TNetEndPoint;
+      out connectionPwd, commandPwd: string);
     constructor Create(const synchronizedEvents: boolean = true);
     procedure Start(const RemoteEndPoint: TNetEndPoint;
       const displayName: string; const connectionPassword: string;
@@ -98,6 +102,11 @@ implementation
 // --------------------------------------------------------------------------
 
 uses
+  SysUtils,
+  System.IOUtils,
+  System.JSON,
+  Winapi.ShlObj,
+  Winapi.Windows,
   System.Netconsts;
 
 class procedure TksUDPDelegate.CheckSocketResult(ResultCode: integer;
@@ -200,13 +209,78 @@ begin
   if FSocket = INVALID_SOCKET then
   begin
     FRemoteEndPoint := ep;
-  end else
-    raise ESocketError.Create('Remote end point not allowed to change while socket is in use');
+  end
+  else
+    raise ESocketError.Create
+      ('Remote end point not allowed to change while socket is in use');
 end;
 
 // --------------------------------------------------------------------------
 // TksUDPv4BroadcastingProtocol
 // --------------------------------------------------------------------------
+
+const
+  BROADCASTING_FILE = 'Assetto Corsa Competizione\Config\broadcasting.json';
+
+class procedure TksUDPv4BroadcastingProtocol.ACCEnpointOnThisComputer
+  (out ep: TNetEndPoint; out connectionPwd, commandPwd: string);
+var
+  pidl: PItemIDList;
+  aux: array [1 .. MAX_PATH] of Char;
+  shresult: integer;
+  mydocs, filename: string;
+  Data: TBytes;
+  text: string;
+  l: integer;
+  encoding: TEncoding;
+  root: TJSONObject;
+  item: TJSONValue;
+begin
+  shresult := SHGetFolderLocation(0, CSIDL_MYDOCUMENTS, 0, 0, pidl);
+  if (shresult = S_OK) then
+  begin
+    ep.Family := AF_INET;
+    ep.SetAddress('127.0.0.1');
+
+    // Put "My Documents" path into "mydocs" var
+    FillChar(aux, SizeOf(aux), 0);
+    SHGetPathFromIDList(pidl, PChar(@aux));
+    SetString(mydocs, PChar(@aux), Length(aux));
+    mydocs := Trim(mydocs);
+    ILFree(pidl);
+
+    // Read "Broadcasting.json"
+    filename := IncludeTrailingPathDelimiter(mydocs) + BROADCASTING_FILE;
+    Data := TFile.ReadAllBytes(filename);
+    l := TEncoding.GetBufferEncoding(Data, encoding);
+    if (l = 0) and (Length(Data) > 1) and (Char(Data[1]) = #0) then
+      // UTF-16 encoding without BOM
+      text := TEncoding.Unicode.GetString(Data)
+    else
+      // Use BOM
+      text := encoding.GetString(Data, l, Length(Data) - l);
+
+    // Parse and read JSON data
+    root := TJSONObject.ParseJSONValue(text, false, true);
+    item := root.FindValue('updListenerPort');
+    if (item <> nil) and (item is TJSONNumber) then
+      ep.port := (item as TJSONNumber).AsInt
+    else
+      raise EJSONException.Create('field "updListenerPort" not found');
+    item := root.FindValue('connectionPassword');
+    if (item <> nil) and (item is TJSONString) then
+      connectionPwd := (item as TJSONString).Value
+    else
+      raise EJSONException.Create('field "connectionPassword" not found');
+    item := root.FindValue('commandPassword');
+    if (item <> nil) and (item is TJSONString) then
+      commandPwd := (item as TJSONString).Value
+    else
+      raise EJSONException.Create('field "commandPassword" not found');
+  end
+  else
+    raise EDirectoryNotFoundException.Create('"My Documents" folder not found');
+end;
 
 constructor TksUDPv4BroadcastingProtocol.Create(const synchronizedEvents
   : boolean);
