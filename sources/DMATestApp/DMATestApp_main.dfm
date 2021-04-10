@@ -42,10 +42,6 @@ object Form_main: TForm_main
     object Tab_Graphics: TTabSheet
       Caption = 'Graphics'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Memo_graphics: TMemo
         Left = 0
         Top = 0
@@ -62,10 +58,6 @@ object Form_main: TForm_main
     object Tab_Physics: TTabSheet
       Caption = 'Physics'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Memo_physics: TMemo
         Left = 0
         Top = 0
@@ -90,7 +82,7 @@ object Form_main: TForm_main
     ShowCaption = False
     TabOrder = 1
     object Lbl_Info: TLabel
-      Left = 138
+      Left = 134
       Top = 14
       Width = 495
       Height = 21

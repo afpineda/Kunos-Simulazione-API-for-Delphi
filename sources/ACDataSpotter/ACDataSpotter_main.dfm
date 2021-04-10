@@ -28,7 +28,7 @@ object Form_main: TForm_main
     TabOrder = 0
   end
   object Chk_stayOnTop: TCheckBox
-    Left = 376
+    Left = 380
     Top = 8
     Width = 97
     Height = 17
@@ -48,7 +48,7 @@ object Form_main: TForm_main
   object Timer_main: TTimer
     Interval = 500
     OnTimer = Timer_mainTimer
-    Left = 412
+    Left = 428
     Top = 36
   end
 end

@@ -22,6 +22,8 @@ unit ksSharedMem.Data;
 
   [2021-03-10] First implementation
 
+  [2021-04-21] Up to date with other sources
+
   ******************************************************* }
 
 interface

@@ -21,6 +21,8 @@ unit ksSharedMem.Events;
 
   [2021-03-18] First implementation
 
+  [2021-04-21] Up to date with other sources
+
   ******************************************************* }
 
 interface
