@@ -32,6 +32,7 @@ uses
 type
   TksLeaderboard = class
   public type
+    TCarDistances = TArray<TArray<integer>>;
     TField = (driverFirstName, driverLastName, driverShortName,
       driverDisplayName, teamName, raceNumber, bestTime, lastTime, currentTime,
       officialPos, trackPos, carLocation, laps, deltaToPersonalBestLap,
@@ -48,6 +49,9 @@ type
     constructor Create(entryList: TksEntryList; carDataList: TksCarDataList;
       const sessionData: TksSessionData);
     destructor Destroy; override;
+    function GetCarDistances(trackMeters: integer): TCarDistances;
+    function CarToCarDistance(car1index, car2index: integer;
+      trackMeters: integer): integer;
     function IndexOf(const carNumber: integer): integer;
     function GetField(index: integer; field: TField): string;
     function GetRaceMeters(index: integer; trackMeters: integer): Int64;
@@ -61,6 +65,7 @@ type
 function LapTimeMsToStr(const timeMS: integer): string;
 function SessionTimeMsToStr(const timeMS: Single): string;
 function DeltaTimeMsToStr(const time1MS, time2MS: integer): string;
+function DistanceBetweenCars(car1Pos, car2Pos, trackMeters: integer): integer;
 
 implementation
 
@@ -68,6 +73,10 @@ uses
   System.Generics.Defaults,
   StrUtils,
   SysUtils;
+
+// ----------------------------------------------------------------------------
+// Exported functions
+// ----------------------------------------------------------------------------
 
 function LapTimeMsToStr(const timeMS: integer): string;
 var
@@ -132,6 +141,10 @@ begin
   end;
 end;
 
+// ----------------------------------------------------------------------------
+// TksLeaderboard
+// ----------------------------------------------------------------------------
+
 constructor TksLeaderboard.Create(entryList: TksEntryList;
   carDataList: TksCarDataList; const sessionData: TksSessionData);
 var
@@ -167,7 +180,7 @@ end;
 
 function TksLeaderboard.GetField(index: integer; field: TField): string;
 var
-  carInfo: TKsCarInfo;
+  carInfo: TksCarInfo;
   driverIndex: integer;
   driverInfo: TKsDriverInfo;
 begin
@@ -279,6 +292,51 @@ begin
       Result := i
     else
       inc(i);
+end;
+
+function TksLeaderboard.CarToCarDistance(car1index, car2index: integer;
+  trackMeters: integer): integer;
+var
+  pos1, pos2: Int64;
+begin
+  pos1 := Trunc(FCarDataList[car1index].SplinePosition * trackMeters);
+  pos2 := Trunc(FCarDataList[car2index].SplinePosition * trackMeters);
+  Result := DistanceBetweenCars(pos1, pos2, trackMeters);
+end;
+
+function DistanceBetweenCars(car1Pos, car2Pos, trackMeters: integer): integer;
+var
+  aux: Int64;
+  d1, d2: integer;
+begin
+  if (car1Pos < car2Pos) then
+  begin
+    aux := car2Pos;
+    car2Pos := car1Pos;
+    car1Pos := aux;
+  end;
+  d1 := car1Pos - car2Pos;
+  d2 := (trackMeters - car1Pos) + car2Pos;
+  if (d1 < d2) then
+    Result := d1
+  else
+    Result := d2;
+end;
+
+function TksLeaderboard.GetCarDistances(trackMeters: integer): TCarDistances;
+var
+  idx1, idx2: integer;
+begin
+  SetLength(Result, Length(FCarDataList));
+  for idx1 := Low(Result) to High(Result) do
+  begin
+    SetLength(Result[idx1], Length(FCarDataList));
+    for idx2 := Low(Result[idx1]) to idx1 - 1 do
+      Result[idx1][idx2] := Result[idx2][idx1];
+    Result[idx1][idx1] := 0;
+    for idx2 := idx1 + 1 to High(Result[idx1]) do
+      Result[idx1][idx2] := CarToCarDistance(idx1, idx2, trackMeters);
+  end;
 end;
 
 end.

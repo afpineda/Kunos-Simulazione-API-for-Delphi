@@ -26,6 +26,8 @@ interface
 
   [2021-03-30] Fixed bug on TksEntryList.Sort
 
+  [2021-04-10] Reworked
+
   ******************************************************* }
 
 uses
@@ -505,36 +507,8 @@ begin
   inherited;
 end;
 
-// function TksEntryList.Duplicate;
-// var
-// item: TksCarInfo;
-// begin
-// Result := TksEntryList.Create;
-// for item in Values do
-// Result.Add(item.carIndex, TksCarInfo.Create(item));
-// end;
-
-// procedure TksEntryList.Sort;
-// var
-// Comparison: TComparison<TksCarInfo>;
-// begin
-// Comparison := function(const Left, Right: TksCarInfo): integer
-// begin
-// Result := Left.FCarIndex - Right.FCarIndex;
-// end;
-// inherited Sort(TComparer<TksCarInfo>.Construct(Comparison));
-// end;
-
 function TksEntryList.findIndex(const carIndex: UInt16): TksCarInfo;
 begin
-  // Result := nil;
-  // i := 0;
-  // while (Result = nil) and (i < Count) and (Items[i].carIndex <= carIndex) do
-  // begin
-  // if (Items[i].carIndex = carIndex) then
-  // Result := Items[i];
-  // inc(i);
-  // end;
   if self.ContainsKey(carIndex) then
     Result := self.Items[carIndex]
   else
@@ -542,24 +516,13 @@ begin
 end;
 
 function TksEntryList.findRaceNumber(const raceNumber: integer): TksCarInfo;
-// var
-// i: integer;
-// begin
-// Result := nil;
-// i := 0;
-// while (Result = nil) and (i < Count) do
-// begin
-// if (Items[i].raceNumber = raceNumber) then
-// Result := Items[i];
-// inc(i);
-// end;
 var
-  item: TksCarInfo;
+  item: TPair<integer,TksCarInfo>;
 begin
-  for item in Values do
-    if (item.raceNumber = raceNumber) then
+  for item in self do
+    if (item.Value.raceNumber = raceNumber) then
     begin
-      Result := item;
+      Result := item.Value;
       Exit;
     end;
   Result := nil;

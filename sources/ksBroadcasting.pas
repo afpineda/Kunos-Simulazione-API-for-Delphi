@@ -661,12 +661,15 @@ begin
           serverActivityFlag := false;
           NotifyNoServerActivity;
         end;
+        if (cancelBackgroundTasks) then
+          continue;
         if isInactive or RegistrationRequestTimedOut then
         begin
           RetryRegistrationRequest;
           sleep(UpdateIntervalMs * 3);
         end;
       end;
+
     except
     end;
   until (cancelBackgroundTasks);
