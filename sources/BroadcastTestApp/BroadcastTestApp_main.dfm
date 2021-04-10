@@ -3,7 +3,7 @@ object Form_main: TForm_main
   Top = 0
   Caption = 'KS Broadcast API demo'
   ClientHeight = 371
-  ClientWidth = 602
+  ClientWidth = 668
   Color = clBtnFace
   Constraints.MinHeight = 410
   Constraints.MinWidth = 330
@@ -21,9 +21,9 @@ object Form_main: TForm_main
   object PC_main: TPageControl
     Left = 0
     Top = 0
-    Width = 602
+    Width = 668
     Height = 371
-    ActivePage = Page_Plotter
+    ActivePage = Page_carEntries
     Align = alClient
     TabOrder = 0
     object Page_Connect: TTabSheet
@@ -35,7 +35,7 @@ object Form_main: TForm_main
       object Panel_connection: TPanel
         Left = 0
         Top = 0
-        Width = 594
+        Width = 660
         Height = 201
         Align = alTop
         BevelOuter = bvNone
@@ -43,7 +43,7 @@ object Form_main: TForm_main
         ShowCaption = False
         TabOrder = 0
         DesignSize = (
-          594
+          660
           201)
         object Edt_CommandPwd: TLabeledEdit
           Left = 11
@@ -100,17 +100,18 @@ object Form_main: TForm_main
           OnClick = Btn_DefConnFieldClick
         end
         object AI_Receiving: TActivityIndicator
-          Left = 552
+          Left = 618
           Top = 13
           Anchors = [akTop, akRight]
           FrameDelay = 100
           IndicatorType = aitRotatingSector
+          ExplicitLeft = 552
         end
       end
       object Memo_Log: TMemo
         Left = 0
         Top = 242
-        Width = 594
+        Width = 660
         Height = 101
         Align = alClient
         Lines.Strings = (
@@ -122,14 +123,14 @@ object Form_main: TForm_main
       object Panel_ConnectButtons: TPanel
         Left = 0
         Top = 201
-        Width = 594
+        Width = 660
         Height = 41
         Align = alTop
         BevelOuter = bvNone
         ShowCaption = False
         TabOrder = 2
         DesignSize = (
-          594
+          660
           41)
         object Btn_connect: TButton
           Left = 11
@@ -151,7 +152,7 @@ object Form_main: TForm_main
           OnClick = Btn_DisconnectClick
         end
         object Btn_ClearLog: TButton
-          Left = 514
+          Left = 580
           Top = 6
           Width = 75
           Height = 25
@@ -159,6 +160,7 @@ object Form_main: TForm_main
           Caption = 'Clear Log'
           TabOrder = 2
           OnClick = Btn_ClearLogClick
+          ExplicitLeft = 514
         end
       end
     end
@@ -188,7 +190,7 @@ object Form_main: TForm_main
       object Splitter1: TSplitter
         Left = 0
         Top = 157
-        Width = 594
+        Width = 660
         Height = 10
         Cursor = crVSplit
         Align = alTop
@@ -198,7 +200,7 @@ object Form_main: TForm_main
       object Grid_carEntries: TStringGrid
         Left = 0
         Top = 13
-        Width = 594
+        Width = 660
         Height = 144
         Hint = 'Double click for camera focus'
         Align = alTop
@@ -214,7 +216,7 @@ object Form_main: TForm_main
       object Grid_drivers: TStringGrid
         Left = 0
         Top = 180
-        Width = 594
+        Width = 660
         Height = 163
         Align = alClient
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect]
@@ -231,42 +233,49 @@ object Form_main: TForm_main
       object List_CarData: TListView
         Left = 0
         Top = 0
-        Width = 594
+        Width = 660
         Height = 343
         Align = alClient
         Columns = <
           item
-            Caption = 'Car Idx'
+            Caption = 'RaceNum'
           end
           item
-            Caption = 'Driver Idx'
+            Caption = 'Driver'
             Width = 70
           end
           item
-            Caption = 'X'
+            Caption = 'best'
           end
           item
-            Caption = 'Y'
+            Caption = 'GapToBest'
           end
           item
-            Caption = 'Official pos'
+            Caption = 'last'
+          end
+          item
+            Caption = 'current'
             Width = 70
           end
           item
-            Caption = 'Track pos'
+            Caption = 'Pos'
+          end
+          item
+            Caption = 'track pos'
             Width = 60
           end
           item
-            Caption = 'Lap pos'
-            Width = 60
-          end
-          item
-            Caption = 'Lap count'
+            Caption = 'Loc'
             Width = 70
           end
           item
-            Caption = 'Last lap time'
-            Width = 110
+            Caption = 'Lap'
+          end
+          item
+            Caption = 'Gap'
+          end
+          item
+            Caption = '---'
           end>
         ReadOnly = True
         RowSelect = True
@@ -279,19 +288,20 @@ object Form_main: TForm_main
       ImageIndex = 3
       ExplicitLeft = 0
       ExplicitTop = 0
-      ExplicitWidth = 0
+      ExplicitWidth = 594
       ExplicitHeight = 0
       object VE_Session: TValueListEditor
         Left = 0
         Top = 0
-        Width = 594
+        Width = 660
         Height = 343
         Align = alClient
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goAlwaysShowEditor, goThumbTracking]
         TabOrder = 0
+        ExplicitWidth = 594
         ColWidths = (
           150
-          150)
+          504)
       end
     end
     object Page_TrackData: TTabSheet
@@ -299,12 +309,12 @@ object Form_main: TForm_main
       ImageIndex = 4
       ExplicitLeft = 0
       ExplicitTop = 0
-      ExplicitWidth = 0
+      ExplicitWidth = 594
       ExplicitHeight = 0
       object Lbl_Hud: TLabel
         Left = 0
         Top = 74
-        Width = 594
+        Width = 660
         Height = 13
         Align = alTop
         Caption = 'HUD Pages'
@@ -313,7 +323,7 @@ object Form_main: TForm_main
       object Lbl_Cams: TLabel
         Left = 0
         Top = 200
-        Width = 594
+        Width = 660
         Height = 13
         Align = alTop
         Caption = 'Cameras'
@@ -322,7 +332,7 @@ object Form_main: TForm_main
       object Splitter2: TSplitter
         Left = 0
         Top = 190
-        Width = 594
+        Width = 660
         Height = 10
         Cursor = crVSplit
         Align = alTop
@@ -333,7 +343,7 @@ object Form_main: TForm_main
       object VE_Track: TValueListEditor
         Left = 0
         Top = 25
-        Width = 594
+        Width = 660
         Height = 49
         Align = alTop
         DisplayOptions = [doAutoColResize, doKeyColFixed]
@@ -344,14 +354,15 @@ object Form_main: TForm_main
           'b=2'
           'c=3')
         TabOrder = 0
+        ExplicitWidth = 594
         ColWidths = (
           150
-          150)
+          504)
       end
       object LV_HUD: TListView
         Left = 0
         Top = 87
-        Width = 594
+        Width = 660
         Height = 103
         Hint = 'Double click to request HUD page'
         Align = alTop
@@ -368,11 +379,12 @@ object Form_main: TForm_main
         TabOrder = 1
         ViewStyle = vsList
         OnDblClick = LV_HUDDblClick
+        ExplicitWidth = 594
       end
       object LV_Cam: TListView
         Left = 0
         Top = 213
-        Width = 594
+        Width = 660
         Height = 130
         Hint = 'Double click to request camera focus'
         Align = alClient
@@ -397,16 +409,18 @@ object Form_main: TForm_main
         TabOrder = 2
         ViewStyle = vsReport
         OnDblClick = LV_CamDblClick
+        ExplicitWidth = 594
       end
       object Btn_ForceTrackData: TButton
         Left = 0
         Top = 0
-        Width = 594
+        Width = 660
         Height = 25
         Align = alTop
         Caption = 'Force update'
         TabOrder = 3
         OnClick = Btn_ForceTrackDataClick
+        ExplicitWidth = 594
       end
     end
     object Page_Plotter: TTabSheet
@@ -414,16 +428,17 @@ object Form_main: TForm_main
       ImageIndex = 5
       ExplicitLeft = 0
       ExplicitTop = 0
-      ExplicitWidth = 0
+      ExplicitWidth = 594
       ExplicitHeight = 0
       object PB_Plotter: TPaintBox
         Left = 0
         Top = 48
-        Width = 594
+        Width = 660
         Height = 295
         Align = alBottom
         Anchors = [akLeft, akTop, akRight, akBottom]
         OnPaint = PB_PlotterPaint
+        ExplicitWidth = 594
       end
       object Btn_ClearPlotter: TButton
         Left = 3

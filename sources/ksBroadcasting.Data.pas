@@ -26,6 +26,8 @@ interface
 
   [2021-03-30] Fixed bug on TksEntryList.Sort
 
+  [2021-04-10] Reworked
+
   ******************************************************* }
 
 uses
@@ -102,7 +104,9 @@ type
     FShortName: string;
     FCategory: TksDriverCategory;
     FNationality: TksNationalityEnum;
+    function GetDisplayName: string;
   public
+    property DisplayName: string read GetDisplayName;
     property FirstName: string read FFirstName;
     property LastName: string read FLastName;
     property ShortName: string read FShortName;
@@ -139,13 +143,14 @@ type
   end;
 
 type
-  TksEntryList = class(TObjectList<TksCarInfo>)
+  TksEntryList = class(TDictionary<integer, TksCarInfo>)
   public
-    constructor Create;
-    function Duplicate: TksEntryList;
+    constructor Create; overload;
+    constructor Create(source: TksEntryList); overload;
+    destructor Destroy; override;
     function findIndex(const carIndex: UInt16): TksCarInfo;
     function findRaceNumber(const raceNumber: integer): TksCarInfo;
-    procedure Sort;
+    procedure Clear;
   end;
 
 type
@@ -162,6 +167,12 @@ type
 
 type
   TksCarData = record
+    { NOTES from observation:
+      - TrackPosition is allways zero
+      - WorldPosX,Y does not look like coordinates
+      - Yaw is useless
+      - Position: strict sequential numbering, 1-based.
+    }
     carIndex: UInt16;
     DriverIndex: UInt16;
     Gear: BYTE;
@@ -184,7 +195,19 @@ type
   end;
 
 type
+  TksCarDataList = TDictionary<integer, TksCarData>;
+
+type
   TksSessionData = record
+    { NOTES from observation:
+      - SessionTime: Elapsed session time counting from race/session start
+      - RemainingTime:  allways zero, no meaning ?
+      - SessionEndTime: Remaining time to checkered flag (countdown) or
+      end of session
+      - SessionRemainingTime: no meaning ?
+      - EventIndex: allways zero ?
+      - SessionIndex: first session is zero, then increases on each new session.
+    }
     EventIndex: UInt16;
     SessionIndex: UInt16;
     Phase: TksSessionPhase;
@@ -196,8 +219,8 @@ type
     Wetness: Single;
     BestSessionLap: TksLapInfo;
     // NOTE: Included in kunos api, but not used anywhere
-//    BestLapCarIndex: SmallInt;
-//    BestLapDriverIndex: SmallInt;
+    // BestLapCarIndex: SmallInt;
+    // BestLapDriverIndex: SmallInt;
     FocusedCarIndex: Int32;
     ActiveCameraSet: string;
     ActiveCamera: string;
@@ -211,6 +234,7 @@ type
     TrackTemp: BYTE;
     CurrentHudPage: string;
     procedure readFromStream(const strm: TStream);
+    procedure Reset;
   end;
 
 type
@@ -237,7 +261,7 @@ type
     eventType: TksBroadcastingEventType;
     messageText: string;
     TimeMS: integer;
-    CarIndex: integer;
+    carIndex: integer;
     procedure readFromStream(const strm: TStream);
   end;
 
@@ -247,6 +271,7 @@ procedure WriteString(const strm: TStream; const str: string);
 implementation
 
 uses
+  StrUtils,
   System.Generics.Defaults,
   System.SysUtils;
 
@@ -379,6 +404,22 @@ begin
   strm.ReadBuffer(FNationality, sizeof(FNationality));
 end;
 
+function TKsDriverInfo.GetDisplayName: string;
+var
+  lfn, lln: integer;
+begin
+  lfn := Length(FFirstName);
+  lln := Length(FLastName);
+  if (lfn > 0) and (lln > 0) then
+    Result := LeftStr(FFirstName, 1) + '. ' + FLastName
+  else if (lln > 0) then
+    Result := FLastName
+  else if (lfn > 0) then
+    Result := FFirstName
+  else
+    Result := FShortName;
+end;
+
 // ----------------------------------------------------------------------------
 // TksCarInfo
 // ----------------------------------------------------------------------------
@@ -448,57 +489,53 @@ end;
 
 constructor TksEntryList.Create;
 begin
-  inherited Create(true);
+  inherited Create;
 end;
 
-function TksEntryList.Duplicate;
+constructor TksEntryList.Create(source: TksEntryList);
 var
-  i: integer;
+  item: TPair<integer, TksCarInfo>;
 begin
-  Result := TksEntryList.Create;
-  for i := 0 to Count - 1 do
-    Result.Add(TksCarInfo.Create(Items[i]));
+  inherited Create;
+  for item in source do
+    Add(item.key, TksCarInfo.Create(item.value));
 end;
 
-procedure TksEntryList.Sort;
-var
-  Comparison: TComparison<TksCarInfo>;
+destructor TksEntryList.Destroy;
 begin
-  Comparison := function(const Left, Right: TksCarInfo): integer
-    begin
-      Result := Left.FCarIndex - Right.FCarIndex;
-    end;
-  inherited Sort(TComparer<TksCarInfo>.Construct(Comparison));
+  Clear;
+  inherited;
 end;
 
 function TksEntryList.findIndex(const carIndex: UInt16): TksCarInfo;
-var
-  i: integer;
 begin
-  Result := nil;
-  i := 0;
-  while (Result = nil) and (i < Count) and (Items[i].carIndex <= carIndex) do
-  begin
-    if (Items[i].carIndex = carIndex) then
-      Result := Items[i];
-    inc(i);
-  end;
+  if self.ContainsKey(carIndex) then
+    Result := self.Items[carIndex]
+  else
+    Result := nil;
 end;
 
 function TksEntryList.findRaceNumber(const raceNumber: integer): TksCarInfo;
 var
-    i: integer;
+  item: TPair<integer,TksCarInfo>;
 begin
+  for item in self do
+    if (item.Value.raceNumber = raceNumber) then
+    begin
+      Result := item.Value;
+      Exit;
+    end;
   Result := nil;
-  i := 0;
-  while (Result = nil) and (i < Count) do
-  begin
-    if (Items[i].raceNumber = raceNumber) then
-      Result := Items[i];
-    inc(i);
-  end;
 end;
 
+procedure TksEntryList.Clear;
+var
+  item: TksCarInfo;
+begin
+  for item in Values do
+    item.Free;
+  inherited Clear;
+end;
 
 // ----------------------------------------------------------------------------
 // TksSessionData
@@ -535,6 +572,13 @@ begin
   strm.ReadBuffer(aux, sizeof(aux));
   Wetness := aux / 10.0;
   BestSessionLap.readFromStream(strm);
+end;
+
+procedure TksSessionData.Reset;
+begin
+  SessionIndex := HIGH(SessionIndex);
+  Phase := TksSessionPhase.NONE;
+  SessionType := TksRaceSessionType.Practice;
 end;
 
 // ----------------------------------------------------------------------------
@@ -601,7 +645,7 @@ begin
   strm.ReadBuffer(eventType, sizeof(eventType));
   messageText := ReadString(strm);
   strm.ReadBuffer(TimeMS, sizeof(TimeMS));
-  strm.ReadBuffer(CarIndex, sizeof(CarIndex));
+  strm.ReadBuffer(carIndex, sizeof(carIndex));
 end;
 
 end.

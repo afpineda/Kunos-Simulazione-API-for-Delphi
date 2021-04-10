@@ -22,7 +22,7 @@ unit ksBroadcasting.Protocol;
 
   [2021-03-28] First implementation
 
-  [2021-04-03] Reworked
+  [2021-04-10] Reworked
 
   ******************************************************* }
 
@@ -33,6 +33,7 @@ uses
   System.Generics.Collections,
   System.Threading,
   System.SyncObjs,
+  ksBroadcasting.Leaderboard,
   ksBroadcasting.Data,
   ksBroadcasting;
 
@@ -76,21 +77,37 @@ type
     TOnCarDataEvent = procedure(Sender: TksBroadcastingProtocol;
       const carInfo: TKsCarData) of object;
     TOnSessionDataEvent = procedure(Sender: TksBroadcastingProtocol;
-      const sessionData: TKsSessionData) of object;
+      const current, previous: TKsSessionData) of object;
     TOnBroadcastingEventEvent = procedure(Sender: TksBroadcastingProtocol;
       const event: TksBroadcastingEvent) of object;
+    TOnLeaderboardUpdateEvent = procedure(Sender: TksBroadcastingProtocol;
+      Leaderboard: TksLeaderboard) of object;
   private
+    FCurrentLeaderBoard: TksCarDataList;
+    FCurrentSessionData: TKsSessionData;
     FDoSync: boolean;
     FEntryList: TKsEntryList;
+    FLastLeaderboardCount: integer;
     FOnRegistration: TOnRegistrationEvent;
     FOnEntryList: TOnEntryListEvent;
     FOnTrackData: TOnTrackDataEvent;
+    FOnLeaderboardUpdate: TOnLeaderboardUpdateEvent;
     FOnCarData: TOnCarDataEvent;
     FOnSessionData: TOnSessionDataEvent;
     FOnBroadcastingEvent: TOnBroadcastingEventEvent;
     FOnServerInactivity: TNotifyEvent;
     expectedEntryCount: integer;
   protected
+    function NotifyBroadcastingEvent(const event: TksBroadcastingEvent)
+      : boolean; virtual;
+    function NotifyCarData(const carData: TKsCarData): boolean; virtual;
+    function NotifyEntryList(newEntryList: TKsEntryList): boolean; virtual;
+    function NotifyLeaderBoard: boolean; virtual;
+    function NotifyRegistrationResult(const regResult: TKsRegistrationResult)
+      : boolean; virtual;
+    function NotifySessionData(const sessionData: TKsSessionData)
+      : boolean; virtual;
+    function NotifyTrackData(const trackData: TksTrackData): boolean; virtual;
     procedure NotifyNoServerActivity; override;
     procedure Msg(const result: TKsRegistrationResult); overload; override;
     procedure Msg(const sessionData: TKsSessionData); overload; override;
@@ -108,16 +125,18 @@ type
     property OnBroadcastingEvent: TOnBroadcastingEventEvent
       read FOnBroadcastingEvent write FOnBroadcastingEvent;
     property OnCarData: TOnCarDataEvent read FOnCarData write FOnCarData;
-    property OnRegistration: TOnRegistrationEvent read FOnRegistration
-      write FOnRegistration;
     property OnEntryList: TOnEntryListEvent read FOnEntryList
       write FOnEntryList;
+    property OnLeaderboardUpdate: TOnLeaderboardUpdateEvent
+      read FOnLeaderboardUpdate write FOnLeaderboardUpdate;
+    property OnRegistration: TOnRegistrationEvent read FOnRegistration
+      write FOnRegistration;
     property OnSessionData: TOnSessionDataEvent read FOnSessionData
       write FOnSessionData;
-    property OnTrackData: TOnTrackDataEvent read FOnTrackData
-      write FOnTrackData;
     property OnServerInactivity: TNotifyEvent read FOnServerInactivity
       write FOnServerInactivity;
+    property OnTrackData: TOnTrackDataEvent read FOnTrackData
+      write FOnTrackData;
   end;
 
 implementation
@@ -125,10 +144,15 @@ implementation
 uses
   System.SysUtils;
 
+// ----------------------------------------------------------------------------
+// Create/destroy
+// ----------------------------------------------------------------------------
+
 constructor TksBroadcastingProtocol.Create(msgDelegate: IksMessageDelegate;
   const synchronizedEvents: boolean = true);
 begin
   inherited Create(msgDelegate);
+  FCurrentLeaderBoard := TksCarDataList.Create;
   FDoSync := synchronizedEvents;
   FOnRegistration := nil;
   FOnEntryList := nil;
@@ -137,6 +161,10 @@ begin
   FOnSessionData := nil;
   FOnBroadcastingEvent := nil;
   FOnServerInactivity := nil;
+  FOnLeaderboardUpdate := nil;
+  FCurrentSessionData.Reset;
+  FLastLeaderboardCount := 0;
+
   FEntryList := TKsEntryList.Create;
   expectedEntryCount := 0;
 end;
@@ -146,6 +174,10 @@ begin
   inherited;
   FEntryList.Free;
 end;
+
+// ----------------------------------------------------------------------------
+// Create/destroy
+// ----------------------------------------------------------------------------
 
 procedure TksBroadcastingProtocol.NotifyNoServerActivity;
 begin
@@ -164,6 +196,10 @@ begin
   end;
 end;
 
+// ----------------------------------------------------------------------------
+// overriden "Msg" methods
+// ----------------------------------------------------------------------------
+
 procedure TksBroadcastingProtocol.Msg(const result: TKsRegistrationResult);
 begin
   if result.success then
@@ -171,54 +207,32 @@ begin
     RequestEntryList(true);
     RequestTrackData;
   end;
-  if Assigned(FOnRegistration) then
-    if FDoSync then
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          FOnRegistration(self, result);
-        end)
-    else
-      FOnRegistration(self, result);
+  NotifyRegistrationResult(result);
 end;
 
 procedure TksBroadcastingProtocol.Msg(const carEntryCount: integer);
 begin
   FEntryList.Clear;
   expectedEntryCount := carEntryCount;
-  if Assigned(FOnEntryList) then
-    if FDoSync then
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          FOnEntryList(self, nil);
-        end)
-    else
-      FOnEntryList(self, nil);
+  NotifyEntryList(nil);
 end;
 
 procedure TksBroadcastingProtocol.Msg(const carInfo: TKsCarInfo);
 var
   complete: boolean;
   notFound: boolean;
+  newEntryList: TKsEntryList;
 begin
-  notFound := (FEntryList.findIndex(carInfo.carIndex) = nil);
+  notFound := not FEntryList.ContainsKey(carInfo.carIndex);
   if (expectedEntryCount > 0) and (notFound) then
   begin
-    FEntryList.Add(carInfo);
+    FEntryList.Add(carInfo.carIndex, carInfo);
     dec(expectedEntryCount);
     complete := (expectedEntryCount = 0);
     if (complete and Assigned(FOnEntryList)) then
     begin
-      FEntryList.Sort;
-      if FDoSync then
-        TThread.Synchronize(nil,
-          procedure
-          begin
-            FOnEntryList(self, FEntryList.Duplicate);
-          end)
-      else
-        FOnEntryList(self, FEntryList.Duplicate);
+      newEntryList := TKsEntryList.Create(FEntryList);
+      NotifyEntryList(newEntryList);
     end;
   end
   else
@@ -231,32 +245,14 @@ end;
 
 procedure TksBroadcastingProtocol.Msg(const trackData: TksTrackData);
 begin
-  if Assigned(FOnTrackData) then
-  begin
-    if FDoSync then
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          FOnTrackData(self, trackData);
-        end)
-    else
-      FOnTrackData(self, trackData);
-  end
-  else
+  if (not NotifyTrackData(trackData)) then
     trackData.Free;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const sessionData: TKsSessionData);
 begin
-  if Assigned(FOnSessionData) then
-    if FDoSync then
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          FOnSessionData(self, sessionData);
-        end)
-    else
-      FOnSessionData(self, sessionData);
+  NotifySessionData(sessionData);
+  FCurrentSessionData := sessionData;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const carData: TKsCarData);
@@ -268,30 +264,33 @@ begin
     carInfo := FEntryList.findIndex(carData.carIndex);
     if ((carInfo = nil) or (carInfo.Drivers.Count <> carData.DriverCount)) then
       RequestEntryList
-    else if (Assigned(FOnCarData)) then
-      if FDoSync then
-        TThread.Synchronize(nil,
-          procedure
-          begin
-            FOnCarData(self, carData);
-          end)
-      else
-        FOnCarData(self, carData);
+    else
+    begin
+      NotifyCarData(carData);
+
+      if (FCurrentLeaderBoard.ContainsKey(carData.carIndex)) then
+      begin
+        // Leaderboard completed
+        if (FLastLeaderboardCount > FCurrentLeaderBoard.Count) then
+          // someone left the server
+          RequestEntryList;
+        FLastLeaderboardCount := FCurrentLeaderBoard.Count;
+        NotifyLeaderBoard;
+        FCurrentLeaderBoard.Clear;
+      end;
+      FCurrentLeaderBoard.Add(carData.carIndex, carData);
+    end;
   end;
 end;
 
 procedure TksBroadcastingProtocol.Msg(const event: TksBroadcastingEvent);
 begin
-  if Assigned(FOnBroadcastingEvent) then
-    if FDoSync then
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          FOnBroadcastingEvent(self, event);
-        end)
-    else
-      FOnBroadcastingEvent(self, event);
+  NotifyBroadcastingEvent(event);
 end;
+
+// ----------------------------------------------------------------------------
+// Other requests
+// ----------------------------------------------------------------------------
 
 procedure TksBroadcastingProtocol.RequestFocusOnRaceNumber(const carRaceNumber
   : integer; const cameraSet: string = ''; const camera: string = '');
@@ -305,5 +304,122 @@ begin
       RequestFocus(carInfo.carIndex, cameraSet, camera);
   end;
 end;
+
+// ----------------------------------------------------------------------------
+// Notifications
+// ----------------------------------------------------------------------------
+
+function TksBroadcastingProtocol.NotifyBroadcastingEvent
+  (const event: TksBroadcastingEvent): boolean;
+begin
+  result := Assigned(FOnBroadcastingEvent);
+  if result then
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnBroadcastingEvent(self, event);
+        end)
+    else
+      FOnBroadcastingEvent(self, event);
+end;
+
+function TksBroadcastingProtocol.NotifyCarData(const carData
+  : TKsCarData): boolean;
+begin
+  result := Assigned(FOnCarData);
+  if result then
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnCarData(self, carData);
+        end)
+    else
+      FOnCarData(self, carData);
+end;
+
+function TksBroadcastingProtocol.NotifyTrackData(const trackData
+  : TksTrackData): boolean;
+begin
+  result := Assigned(FOnTrackData);
+  if result then
+  begin
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnTrackData(self, trackData);
+        end)
+    else
+      FOnTrackData(self, trackData);
+  end;
+end;
+
+function TksBroadcastingProtocol.NotifySessionData(const sessionData
+  : TKsSessionData): boolean;
+begin
+  result := Assigned(FOnSessionData);
+  if result then
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnSessionData(self, sessionData, FCurrentSessionData);
+        end)
+    else
+      FOnSessionData(self, sessionData, FCurrentSessionData);
+end;
+
+function TksBroadcastingProtocol.NotifyEntryList(newEntryList
+  : TKsEntryList): boolean;
+begin
+  result := Assigned(FOnEntryList);
+  if FDoSync then
+    TThread.Synchronize(nil,
+      procedure
+      begin
+        FOnEntryList(self, newEntryList);
+      end)
+  else
+    FOnEntryList(self, newEntryList);
+end;
+
+function TksBroadcastingProtocol.NotifyRegistrationResult(const regResult
+  : TKsRegistrationResult): boolean;
+begin
+  result := Assigned(FOnRegistration);
+  if result then
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnRegistration(self, regResult);
+        end)
+    else
+      FOnRegistration(self, regResult);
+end;
+
+function TksBroadcastingProtocol.NotifyLeaderBoard: boolean;
+var
+  lb: TksLeaderboard;
+begin
+  result := Assigned(FOnLeaderboardUpdate);
+  if (result) then
+  begin
+    lb := TksLeaderboard.Create(FEntryList, FCurrentLeaderBoard,
+      FCurrentSessionData);
+    if FDoSync then
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          FOnLeaderboardUpdate(self, lb);
+        end)
+    else
+      FOnLeaderboardUpdate(self, lb);
+  end;
+end;
+
+// ----------------------------------------------------------------------------
 
 end.

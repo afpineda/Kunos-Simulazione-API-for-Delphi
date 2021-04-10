@@ -160,10 +160,10 @@ type
 
       SERVER INACTIVITY:
       Configured at property "MaxServerInactivityMs".
-      In case of inactivity (after start), "NotifyNoServerActivity" is 
-      called just once. Then, a registration request is sent 
+      In case of inactivity (after start), "NotifyNoServerActivity" is
+      called just once. Then, a registration request is sent
       at regular intervals.
-      
+
       STOP:
       If registered, send an unregistration request.
       In not registered, cancel any pending registration request.
@@ -476,7 +476,8 @@ var
   outStrm: TBytesStream;
 begin
   if (FConnectionID >= 0) then
-    if (force) or (SecondsBetween(Now, lastEntrylistRequest) > 1) then
+    if (force) or (MillisecondsBetween(Now, lastEntrylistRequest) >
+      (FUpdateInterval * 2)) then
     begin
       outStrm := TBytesStream.Create;
       try
@@ -660,12 +661,15 @@ begin
           serverActivityFlag := false;
           NotifyNoServerActivity;
         end;
+        if (cancelBackgroundTasks) then
+          continue;
         if isInactive or RegistrationRequestTimedOut then
         begin
           RetryRegistrationRequest;
           sleep(UpdateIntervalMs * 3);
         end;
       end;
+
     except
     end;
   until (cancelBackgroundTasks);
