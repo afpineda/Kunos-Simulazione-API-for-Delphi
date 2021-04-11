@@ -1,0 +1,83 @@
+===================================
+AUTO SALVADO DE REPETICIONES EN ACC
+===================================
+
+------------------------
+¿PARA QUÉ SIRVE?
+------------------------
+
+ACC tiene una funcionalidad de auto salvado, pero solo salva, como máximo, la última hora y 15 minutos.
+Esta App salvará la sesión entera (solo carrera o clasificatoria) en uno o más ficheros.
+Funciona tanto como piloto como espectador.
+Se ha desarrollado para ayudar a directores de carrera y comisarios.
+
+------------------------
+¿QUÉ HACE FALTA?
+------------------------
+
+Primero:
+Esta App tiene que ejecutarse en el mismo ordenador donde se ejecuta ACC.
+
+Segundo:
+La característica de retransmisión tiene que estar habilitada.
+Edita o crea "My Documents\Assetto Corsa Competizione\Config\broadcasting.json" (con codificación UTF-8).
+Por ejemplo:
+
+{
+    "updListenerPort": 9000,
+    "connectionPassword": "asd",
+    "commandPassword": ""
+}
+
+"commandPassword" no se usa en esta App.
+
+Tercer:
+Se debe configurar una pulsación de tecla simple para salvar repeticiones.
+Ir a "Opciones > Controles > Asignación de teclas > Avanzado > Salvar repetición".
+Los modificadores Shift/ctrl/alt y otras pocas teclas no están soportadas ahora mismo en la App.
+
+------------------------
+¿CÓMO FUNCIONA?
+------------------------
+
+Al inicio, la configuración del juego será automáticamente cargada, así que no hay que configurar nada en la App.
+En las sesiones de carrera o clasificatoria, enviará a ACC la pulsación de la tecla configurada para forzar el salvado de la repetición.
+La tecla por defecto es "M".
+Se hará a intervalos regulares dependiendo de la configuración de ACC en
+"Opciones > General > Máx. intervalo de repetición".
+Si "opciones > General > Auto salvar repetición" está deshabilitado, el último auto salvado estará a cargo de esta App.
+
+------------------------------------
+¿DÓNDE ESTÁN LOS FICHEROS SALVADOS?
+-----------------------------------
+
+Se encuentran en "My Documents\Assetto Corsa Competizione\Replay\Saved".
+Si el último auto salvado es cosa de ACC, se salvará en "My Documents\Assetto Corsa Competizione\Replay\Temp".
+
+------------------------
+MENÚ DE LA APP
+------------------------
+
+Deshabilitar
+-------------
+
+Si está marcado, no se enviará pulsaciones de tecla a ACC. Sin embargo, se notificarán los eventos de auto salvado.
+"Deshabilitar" se marca automáticamente si "Máx. intervalo de repetición" es menor de 10 minutos para evitar
+salvar demasiados ficheros, pero puede desmarcarlo a voluntad.
+
+Salvar repetición ahora (para probar)
+--------------------------------------
+
+Use esta opción para asegurarse de que el auto salvado funciona.
+Se verá un mensaje en el juego, del tipo "Salvando repetición...".
+
+Mostrar estado de la sesión
+----------------------------
+Dice lo que esta App cree que está pasando en ACC.
+
+Recargar ficheros de configuración
+----------------------------------
+
+*IMPORTANTE*
+Si cambia las opciones de configuración durante el juego, esta App no se dará cuenta, a menos que primero se vuelva al menú principal.
+Si no es el caso, debería usar esta opción después de cualquier cambio en la configuración de las repeticiones o en la tecla de "salvar repetición".

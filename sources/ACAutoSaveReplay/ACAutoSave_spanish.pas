@@ -27,6 +27,8 @@ unit ACAutoSave_spanish;
 
   [2021-04-08] Added autoload of config files when changed
 
+  [2021-04-11] Translation of new strings
+
   ******************************************************* }
 
 interface
@@ -74,17 +76,21 @@ begin
   str_disable_warning := 'DESHABILITADO. Sin autosalvado';
   str_enable_warning := 'HABILITADO';
   str_smallAutoReplay :=
-    'El tiempo máx. de repetición es demasiado bajo. Deshabilitando.';
+    'El tiempo máx. de repetición es demasiado bajo. DESHABILITANDO.';
   str_session_race := 'Sesión de carrera';
   str_session_qualy := 'Sesión clasificatoria';
   str_session_other := 'No es sesión de carrera/clasificatoria';
   str_phase_pre := 'preliminares';
-  str_phase_race := 'carrera en curso';
+  str_phase_race := 'carrera/calificatoria en curso';
   str_phase_post := 'carrera finalizada';
   str_rejected := 'Registro UDP rechazado';
   str_key_literal := 'Tecla: ';
   str_defaultKey := 'Usando tecla por defecto ("M")';
   str_unsupportedKey_error := 'Tecla no soportada: "%s"';
+  str_nextAutosave:= 'Siguiente autosalvado a ';
+  str_nextAutosaveOrAtEOS:= ' o al finalizar la sesión';
+  str_nextAutosaveEOS:= 'Siguiente autosalvado al final de la sesión';
+  str_nextAutosaveNotNeeded:='Siguiente autosalvado a cargo de ACC';
 end;
 
 class procedure TSpanishTranslator.TranslateObject(Instance: TObject);

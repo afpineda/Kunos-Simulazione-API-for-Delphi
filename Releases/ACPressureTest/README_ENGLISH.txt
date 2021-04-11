@@ -84,10 +84,3 @@ Select which data fields (and order) to copy-paste. Useful in order to write dow
 "Options > App options > Clean my Window's registry key":
 This app will store user options at the Windows' registry. Choose this to clean such options if you plan to stop using it.
 Will be effective after the app is closed.
-
-
-
-
-
-
-

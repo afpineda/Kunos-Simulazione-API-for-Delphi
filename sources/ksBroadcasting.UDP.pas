@@ -102,7 +102,6 @@ implementation
 // --------------------------------------------------------------------------
 
 uses
-  SysUtils,
   System.IOUtils,
   System.JSON,
   Winapi.ShlObj,
@@ -233,8 +232,7 @@ var
   text: string;
   l: integer;
   encoding: TEncoding;
-  root: TJSONObject;
-  item: TJSONValue;
+  root,item: TJSONValue;
 begin
   shresult := SHGetFolderLocation(0, CSIDL_MYDOCUMENTS, 0, 0, pidl);
   if (shresult = S_OK) then

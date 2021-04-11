@@ -27,6 +27,9 @@ unit ACAutoSave_main;
 
   [2021-04-08] Added autoload of config files when changed
 
+  [2021-04-11] More info logged at state change and
+  autosave.
+
   ******************************************************* }
 
 interface
@@ -36,6 +39,7 @@ uses
   ACCConfigFiles,
   ACCkeyboard,
   ACCConfigWatcher,
+  ksBroadcasting.Data,
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
@@ -73,12 +77,16 @@ type
     procedure LaunchProtocol;
     procedure LoadGameConfig;
     procedure Log(const txt: string); inline;
+    procedure LogNextAutosave;
     procedure SetStatusBar(const txt: string); inline;
     procedure OnLaunchFailure;
     procedure OnConfigChange(Sender: TObject);
     procedure OnSaveReplay(Sender: TObject);
     procedure OnStateChange(Sender: TObject);
     procedure OnRejected(Sender: TObject; const msg: string);
+    class function FormatSessionTime(time: single): string;
+    class function FormatSessionType(st: TksRaceSessionType): string;
+    class function FormatSessionPhase(sp: TksSessionPhase): string;
   public
     { Public declarations }
   end;
@@ -89,7 +97,6 @@ var
 implementation
 
 uses
-  ksBroadcasting.Data,
   ACAutoSave_processes,
   ACAutoSave_strings, I18NUtils;
 
@@ -102,12 +109,33 @@ begin
   SendMessage(Memo_log.Handle, EM_LINESCROLL, 0, Memo_log.Lines.Count);
 end;
 
+procedure TForm_main.LogNextAutosave;
+var
+  aux: string;
+begin
+  if (Protocol.State = InProgress) then
+  begin
+    if (Protocol.NextAutosaveSessionTime > 0.0) then
+    begin
+      aux := str_nextAutosave + FormatSessionTime
+        (Protocol.NextAutosaveSessionTime);
+      if (Protocol.SaveOnEndOfSession) then
+        aux := aux + str_nextAutosaveOrAtEOS;
+    end
+    else if (Protocol.SaveOnEndOfSession) then
+      aux := str_nextAutosaveEOS
+    else
+      aux := str_nextAutosaveNotNeeded;
+    Log(aux);
+  end
+end;
+
 procedure TForm_main.SetStatusBar(const txt: string);
 begin
   SB_main.Panels[0].Text := txt;
 end;
 
-function FormatSessionTime(time: single): string;
+class function TForm_main.FormatSessionTime(time: single): string;
 var
   t, hh, mm, ss: int64;
 begin
@@ -118,7 +146,7 @@ begin
   Result := Format('%.2d:%.2d:%.2d', [hh, mm, ss]);
 end;
 
-function FormatSessionType(st: TksRaceSessionType): string;
+class function TForm_main.FormatSessionType(st: TksRaceSessionType): string;
 begin
   case st of
     TksRaceSessionType.Qualifying:
@@ -130,7 +158,7 @@ begin
   end;
 end;
 
-function FormatSessionPhase(sp: TksSessionPhase): string;
+class function TForm_main.FormatSessionPhase(sp: TksSessionPhase): string;
 begin
   case sp of
     TksSessionPhase.NONE, TksSessionPhase.Starting,
@@ -189,11 +217,11 @@ begin
   end
   else
     Log(str_defaultKey);
-      Protocol.SaveIntervalSeconds := replayCfg.maxTimeReplaySeconds -
-      ((Protocol.UpdateIntervalMs div 1000) * 4);
-    if (Protocol.SaveIntervalSeconds < 10) then
-      Protocol.SaveIntervalSeconds := 10;
-    Protocol.SaveOnEndOfSession := not replayCfg.autoSaveEnabled;
+  Protocol.SaveIntervalSeconds := replayCfg.maxTimeReplaySeconds -
+    ((Protocol.UpdateIntervalMs div 1000) * 4);
+  if (Protocol.SaveIntervalSeconds < 10) then
+    Protocol.SaveIntervalSeconds := 10;
+  Protocol.SaveOnEndOfSession := not replayCfg.autoSaveEnabled;
 end;
 
 procedure TForm_main.OnLaunchFailure;
@@ -307,6 +335,7 @@ begin
       Beep;
     end;
   end;
+  LogNextAutosave;
 end;
 
 procedure TForm_main.OnStateChange(Sender: TObject);
@@ -327,6 +356,12 @@ begin
         end;
     end;
   SetStatusBar(status);
+  if (not Menu_disable.Checked) then
+  begin
+    Log(str_line);
+    Log(status);
+    LogNextAutosave;
+  end;
 end;
 
 procedure TForm_main.OnRejected(Sender: TObject; const msg: string);

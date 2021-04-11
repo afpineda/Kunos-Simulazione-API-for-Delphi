@@ -22,6 +22,9 @@ unit ACAutoSave_protocol;
 
   [2021-04-04] First implementation
 
+  [2021-04-11] Superpole added to recordable sessions.
+  Published session time for next autosave.
+
   ******************************************************* }
 
 interface
@@ -70,6 +73,7 @@ type
     procedure NotifyNoServerActivity; override;
   public
     constructor Create;
+    function IsRecordableSession: boolean;
     procedure Start(Port: integer; const connectionPwd: string);
     property OnRegistrationRejected: TRegistrationRejectedEvent
       read FOnRegistrationRejectedEvent write FOnRegistrationRejectedEvent;
@@ -77,6 +81,7 @@ type
       write FOnSaveReplayEvent;
     property OnStateChangeEvent: TNotifyEvent read FOnStateChangeEvent
       write FOnStateChangeEvent;
+    property NextAutosaveSessionTime: Single read FAutosaveSessionTime;
     property LiveSessionTime: Single read FLiveSessionTime;
     property LiveRemainingTime: Single read FLiveRemainingTime;
     property LiveSessionType: TksRaceSessionType read FLiveSessionType;
@@ -104,6 +109,7 @@ begin
   FOnRegistrationRejectedEvent := nil;
   FConnectionEndPoint.Family := 2;
   FSaveOnEndOfSession := true;
+  FAutosaveSessionTime := 0.0;
 {$IFDEF DEBUG}
   FConnectionEndPoint.SetAddress('192.168.1.160');
 {$ELSE}
@@ -169,6 +175,13 @@ begin
   result := (result + 1) * interval;
 end;
 
+function TAutosaveReplayProtocol.IsRecordableSession: boolean;
+begin
+  Result := (FLiveSessionType = TksRaceSessionType.Qualifying) or
+          (FLiveSessionType = TksRaceSessionType.Race) or
+          (FLiveSessionType = TksRaceSessionType.Superpole)
+end;
+
 procedure TAutosaveReplayProtocol.msg(const sessionData: TKsSessionData);
 var
   mustSave: boolean;
@@ -180,8 +193,7 @@ begin
   case FState of
     TState.Waiting:
       begin
-        if (FLiveSessionType = TksRaceSessionType.Qualifying) or
-          (FLiveSessionType = TksRaceSessionType.Race) then
+        if (IsRecordableSession) then
           if (FLiveSessionPhase = TksSessionPhase.Session) then
           begin
             FState := TState.InProgress;
@@ -192,12 +204,12 @@ begin
       end;
     TState.InProgress:
       begin
-        if ((FLiveSessionType <> TksRaceSessionType.Qualifying) and
-          (FLiveSessionType <> TksRaceSessionType.Race)) or
+        if (not IsRecordableSession) or
           (FLiveSessionPhase < TksSessionPhase.Session) then
         begin
           // Note: session skipped or restarted
           FState := TState.Waiting;
+          FAutosaveSessionTime := 0.0;
           doOnStateChange;
           Exit;
         end;
@@ -205,6 +217,7 @@ begin
         begin
           mustSave := FSaveOnEndOfSession;
           FState := TState.Waiting;
+          FAutosaveSessionTime := 0.0;
           doOnStateChange;
         end
         else if (FLiveSessionPhase = TksSessionPhase.Session) then
