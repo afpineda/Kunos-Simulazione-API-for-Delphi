@@ -5,7 +5,7 @@
         <FrameworkType>VCL</FrameworkType>
         <MainSource>ACAutoSaveReplay.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
         <TargetedPlatforms>2</TargetedPlatforms>
         <AppType>Application</AppType>
@@ -137,8 +137,8 @@
         <Manifest_File>(None)</Manifest_File>
         <UWP_DelphiLogo44>..\resources\film.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>..\resources\film.png</UWP_DelphiLogo150>
-        <VerInfo_Build>25</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.25;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Build>27</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.1.0.27;InternalName=;LegalCopyright=(C) 2021. Ángel Fernández Pineda. Madrid. Spain.;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.1.0.26;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
