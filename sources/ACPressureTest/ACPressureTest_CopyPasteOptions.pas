@@ -25,6 +25,8 @@ unit ACPressureTest_CopyPasteOptions;
 
   [2021-03-30] Added "PSI" to some field's name
 
+  [2021-03-30] Fixed bug on wheel pressure strings
+
   ******************************************************* }
 
 interface
@@ -92,13 +94,13 @@ begin
   List_fields.Checked[i] := true;
   i := List_fields.Items.Add(str_roadTemp);
   List_fields.Checked[i] := true;
-  i := List_fields.Items.Add(str_FL+str_PSI);
+  i := List_fields.Items.Add(str_FL);
   List_fields.Checked[i] := true;
-  i := List_fields.Items.Add(str_FR+str_PSI);
+  i := List_fields.Items.Add(str_FR);
   List_fields.Checked[i] := true;
-  i := List_fields.Items.Add(str_RL+str_PSI);
+  i := List_fields.Items.Add(str_RL);
   List_fields.Checked[i] := true;
-  i := List_fields.Items.Add(str_RR+str_PSI);
+  i := List_fields.Items.Add(str_RR);
   List_fields.Checked[i] := true;
   LoadFields(Form_main.savedCopyPasteFields);
 end;
