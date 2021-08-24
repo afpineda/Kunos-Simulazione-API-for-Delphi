@@ -1,4 +1,3 @@
 @echo off
-set GITCMD=%USERPROFILE%\AppData\Local\GitHubDesktop\app-2.8.1\resources\app\git\cmd
-%GITCMD%\Git log --all --decorate --oneline --graph --date=short --pretty="%%C(white)%%s %%C(green)[%%ad] %%C(yellow)%%d"
+Git log --all --decorate --oneline --graph --date=short --pretty="%%C(white)%%s %%C(green)[%%ad] %%C(yellow)%%d"
 pause
