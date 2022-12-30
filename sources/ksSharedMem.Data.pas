@@ -24,6 +24,8 @@ unit ksSharedMem.Data;
 
   [2021-04-21] Up to date with other sources
 
+  [2022-12-30] Update to API v1.8.12
+
   ******************************************************* }
 
 interface
@@ -71,7 +73,7 @@ type
 
   TACFlagType = (AC_NO_FLAG = 0, AC_BLUE_FLAG = 1, AC_YELLOW_FLAG = 2,
     AC_BLACK_FLAG = 3, AC_WHITE_FLAG = 4, AC_CHECKERED_FLAG = 5,
-    AC_PENALTY_FLAG = 6);
+    AC_PENALTY_FLAG = 6, AC_GREEN_FLAG = 7, ACC_ORANGE_FLAG = 8);
 
   TACTrackGripStatus = (ACC_GREEN = 0, ACC_FAST, ACC_OPTIMUM, ACC_GREASY,
     ACC_DAMP, ACC_WET, ACC_FLOODED);
@@ -259,6 +261,8 @@ type
     rainIntensityIn30min: TACRainIntensity;
     currentTyreSet: integer;
     strategyTyreSet: integer;
+    gapAhead: integer;
+    gapBehind: integer;
   end;
 
   PSPageFileGraphic = ^SPageFileGraphic;

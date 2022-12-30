@@ -380,7 +380,7 @@ begin
 end;
 
 // ----------------------------------------------------------------------------
-// TksCarInfo
+// TKsDriverInfo
 // ----------------------------------------------------------------------------
 
 constructor TKsDriverInfo.Create(source: TKsDriverInfo);
